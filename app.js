@@ -588,8 +588,8 @@
     titulo();
     renderNav();
     if (ui.vista === "inicio") renderInicio();
-    $("btnGen").hidden = !(tableById("tb_pag") && tableById("tb_con"));
-    $("btnNota").hidden = !(tableById("s_ser") && tableById("s_mo") && tableById("s_ref"));
+    $("btnGen").hidden = !piezasGen();
+    $("btnNota").hidden = !piezasNota();
     $("tabs").innerHTML =
       state.tables
         .map(
@@ -2355,58 +2355,132 @@
     $("dlgRep").showModal();
   });
 
-  /* ---------- generar pagos del mes ---------- */
-  function planGen(per) {
-    const P = tableById("tb_pag"),
-      C = tableById("tb_con"),
-      mes = MESES[+per.slice(5) - 1],
-      ya = new Set(P.rows.filter((r) => r.c.g_per === per).map((r) => r.c.g_con));
+  /* ---------- funciones que dependen de la forma del libro ----------
+     "Generar mes" e "Importar nota" no pertenecen a un libro en particular: aparecen en cualquier libro que
+     tenga las tablas y columnas necesarias. Cada pieza se busca por su nombre, sin importar mayúsculas ni
+     acentos, así que funcionan igual en un libro restaurado, importado o creado a mano. */
+  const norm = (s) =>
+    String(s == null ? "" : s)
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .trim()
+      .toLowerCase();
+  /* Primera columna de la tabla que se llame como alguno de los nombres y sea de uno de los tipos. */
+  function colDe(t, nombres, tipos) {
+    for (const n of nombres) {
+      const c = t.cols.find((x) => norm(x.name) === n && (!tipos || tipos.includes(x.type)));
+      if (c) return c;
+    }
+    return null;
+  }
+  const tablaDe = (nombre) => state.tables.find((t) => norm(t.name) === nombre);
+  const TXT = ["text", "select"];
+  /* Escribe un valor en la celda según el tipo de la columna; si es de selección, agrega la opción que falte. */
+  function pon(c, col, v) {
+    if (!col || v == null || v === "") return;
+    if (col.type === "number") {
+      const x = Number(v);
+      c[col.id] = Number.isFinite(x) ? x : 0;
+      return;
+    }
+    v = String(v).trim();
+    if (col.type === "select") {
+      col.options = col.options || [];
+      if (!col.options.includes(v)) col.options.push(v);
+    }
+    c[col.id] = v;
+  }
+
+  /* ---------- generar mes ----------
+     Necesita una tabla con una columna de texto "Periodo" y una relación hacia otra tabla que tenga la
+     columna "Recurrencia". Opcionales: "Mes de pago" en esa otra tabla y "Estatus" en la primera. */
+  function piezasGen() {
+    for (const P of state.tables) {
+      const per = colDe(P, ["periodo"], ["text"]);
+      if (!per) continue;
+      const rels = P.cols.filter((c) => c.type === "relation" && c.table !== P.id);
+      rels.sort((a, b) => (norm(b.name) === "concepto") - (norm(a.name) === "concepto"));
+      for (const rel of rels) {
+        const C = tableById(rel.table),
+          rec = C && colDe(C, ["recurrencia"], TXT);
+        if (rec)
+          return {
+            P,
+            C,
+            per,
+            rel,
+            rec,
+            mes: colDe(C, ["mes de pago", "mes"], TXT),
+            est: colDe(P, ["estatus", "estado"], TXT),
+          };
+      }
+    }
+    return null;
+  }
+  function planGen(per, g) {
+    const mes = MESES[+per.slice(5) - 1],
+      ya = new Set(g.P.rows.filter((r) => r.c[g.per.id] === per).map((r) => r.c[g.rel.id]));
     const o = { nuevos: [], ya: 0, sinMes: 0, rec: 0, anu: 0, mes };
-    C.rows.forEach((r) => {
-      const rec = r.c.n_rec || "Mensual";
-      if (rec === "Único") return;
-      if (rec === "Anual") {
-        if (!r.c.n_mes) {
+    g.C.rows.forEach((r) => {
+      const rec = norm(r.c[g.rec.id]) || "mensual",
+        suMes = g.mes ? norm(r.c[g.mes.id]) : "";
+      if (rec === "unico") return;
+      if (rec === "anual") {
+        if (!suMes) {
           o.sinMes++;
           return;
         }
-        if (r.c.n_mes !== mes) return;
+        if (suMes !== norm(mes)) return;
       }
       if (ya.has(r.id)) {
         o.ya++;
         return;
       }
       o.nuevos.push(r.id);
-      if (rec === "Anual") o.anu++;
+      if (rec === "anual") o.anu++;
       else o.rec++;
     });
     return o;
   }
   function infoGen() {
-    const per = $("genMes").value;
+    const per = $("genMes").value,
+      g = piezasGen();
     $("genError").textContent = "";
+    if (!g) return null;
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(per)) {
       $("genInfo").textContent = "Escribe el periodo como AAAA-MM, por ejemplo 2026-12.";
       return null;
     }
-    const o = planGen(per);
+    const o = planGen(per, g),
+      n = o.nuevos.length;
     $("genInfo").textContent =
-      "Se crearán " +
-      o.nuevos.length +
-      " pagos en Pendiente: " +
+      (n === 1 ? "Se creará 1 fila" : "Se crearán " + n + " filas") +
+      " en " +
+      g.P.name +
+      (g.est ? ", en Pendiente" : "") +
+      ": " +
       o.rec +
-      " recurrentes y " +
+      (o.rec === 1 ? " recurrente y " : " recurrentes y ") +
       o.anu +
-      " anuales de " +
+      (o.anu === 1 ? " anual de " : " anuales de ") +
       o.mes.toLowerCase() +
       "." +
-      (o.ya ? " " + o.ya + " ya existen y no se duplican." : "") +
-      (o.sinMes ? " " + o.sinMes + " anuales sin Mes de pago quedan fuera." : "");
+      (o.ya
+        ? " " + o.ya + (o.ya === 1 ? " ya existe y no se duplica." : " ya existen y no se duplican.")
+        : "") +
+      (o.sinMes
+        ? " " +
+          o.sinMes +
+          (o.sinMes === 1 ? " anual sin mes de pago queda fuera." : " anuales sin mes de pago quedan fuera.")
+        : "");
+    o.g = g;
     return o;
   }
   $("btnGen").onclick = () => {
-    const ps = tableById("tb_pag")
-        .rows.map((r) => r.c.g_per)
+    const g = piezasGen();
+    if (!g) return;
+    const ps = g.P.rows
+        .map((r) => r.c[g.per.id])
         .filter((x) => /^\d{4}-\d{2}$/.test(x || ""))
         .sort(),
       d = new Date();
@@ -2420,6 +2494,15 @@
         y++;
       }
     }
+    $("genTitulo").textContent = "Generar " + g.P.name.toLowerCase() + " del mes";
+    $("genAyuda").textContent =
+      "Toma las filas de la tabla " +
+      g.C.name +
+      " según su " +
+      g.rec.name +
+      ": las recurrentes siempre, las anuales solo en su mes" +
+      (g.mes ? " (columna " + g.mes.name + ")" : "") +
+      " y las únicas nunca.";
     $("genMes").value = y + "-" + String(m).padStart(2, "0");
     infoGen();
     $("dlgGen").showModal();
@@ -2430,27 +2513,38 @@
     const o = infoGen();
     if (!o) return;
     if (!o.nuevos.length) {
-      $("genError").textContent = "No hay pagos por crear en ese periodo.";
+      $("genError").textContent = "No hay filas por crear en ese periodo.";
       return;
     }
     const per = $("genMes").value,
-      P = tableById("tb_pag"),
-      ce = colById(P, "g_est");
+      g = o.g;
     snap();
-    if (ce && ce.options && !ce.options.includes("Pendiente")) ce.options.unshift("Pendiente");
-    P.rows.unshift(
-      ...o.nuevos.map((id) => ({ id: "r_" + uid(), c: { g_con: id, g_per: per, g_est: "Pendiente" } })),
+    if (g.est && g.est.type === "select") {
+      g.est.options = g.est.options || [];
+      if (!g.est.options.includes("Pendiente")) g.est.options.unshift("Pendiente");
+    }
+    g.P.rows.unshift(
+      ...o.nuevos.map((id) => {
+        const c = {};
+        c[g.rel.id] = id;
+        c[g.per.id] = per;
+        if (g.est) c[g.est.id] = "Pendiente";
+        return { id: "r_" + uid(), c };
+      }),
     );
     dirty();
     $("dlgGen").close();
-    goTab("tb_pag");
-    ui.f = { col: "g_per", op: "eq", val: per };
+    goTab(g.P.id);
+    ui.f = { col: g.per.id, op: "eq", val: per };
     $("fOp").value = "eq";
     $("fVal").value = per;
     $("filtro").hidden = false;
     $("btnFiltro").setAttribute("aria-expanded", "true");
     render();
-    toast("Se crearon " + o.nuevos.length + " pagos de " + per, undoApp);
+    toast(
+      (o.nuevos.length === 1 ? "Se creó 1 fila de " : "Se crearon " + o.nuevos.length + " filas de ") + per,
+      undoApp,
+    );
   });
 
   /* ---------- libros ---------- */
@@ -2627,8 +2721,27 @@
       irLibro(state.books[0].id);
     });
 
-  /* ---------- nota de servicio (bloque JSON que entrega Claude) ---------- */
+  /* ---------- nota de servicio (bloque JSON que entrega Claude) ----------
+     Necesita la tabla "Servicios" con una columna de texto "ID" (o "Folio"), y las tablas "Mano de obra" y
+     "Refacciones", cada una con una relación hacia Servicios y una columna numérica "Importe".
+     Las demás columnas son opcionales: si no existen, ese dato de la nota no se guarda. */
+  function piezasNota() {
+    const S = tablaDe("servicios"),
+      id = S && colDe(S, ["id", "folio"], ["text"]);
+    if (!id) return null;
+    const hija = (nombre) => {
+      const t = tablaDe(nombre),
+        rel = t && t.cols.find((c) => c.type === "relation" && c.table === S.id),
+        imp = t && colDe(t, ["importe"], ["number"]);
+      return rel && imp ? { t, rel, imp } : null;
+    };
+    const M = hija("mano de obra"),
+      R = hija("refacciones");
+    return M && R ? { S, id, M, R } : null;
+  }
   function importarNota(txt) {
+    const g = piezasNota();
+    if (!g) return "Este libro ya no tiene las tablas que necesita la nota.";
     let d;
     try {
       d = JSON.parse(txt.replace(/^\s*```\w*\s*$/gm, "").trim());
@@ -2636,56 +2749,75 @@
       return "No se pudo leer. Copia el bloque completo, desde la primera llave hasta la última.";
     }
     const notas = Array.isArray(d) ? d : [d],
-      S = tableById("s_ser"),
-      M = tableById("s_mo"),
-      R = tableById("s_ref"),
-      V = tableById("s_veh"),
-      T = tableById("s_tal");
+      S = g.S,
+      vistos = new Set(S.rows.map((r) => norm(r.c[g.id.id])));
     for (const n of notas) {
       if (!n || !n.servicio || !n.servicio.id) return 'Falta el dato "servicio.id".';
-      const k = String(n.servicio.id).trim().toLowerCase();
-      if (S.rows.some((r) => String(r.c.e_id || "").toLowerCase() === k))
-        return "Ya existe " + n.servicio.id + " en Servicios.";
+      const k = norm(n.servicio.id);
+      if (vistos.has(k)) return "Ya existe " + n.servicio.id + " en " + S.name + ".";
+      vistos.add(k);
     }
     snap();
-    const find = (t, col, name) => {
-      const k = String(name).trim().toLowerCase();
-      let r = t.rows.find((x) => String(x.c[col] || "").toLowerCase() === k);
+    /* Relación con otra tabla: usa la fila que ya se llame así o la crea. */
+    const liga = (c, col, nombre) => {
+      const t = col && tableById(col.table),
+        c0 = t && t.cols[0];
+      if (!c0 || !["text", "select"].includes(c0.type) || nombre == null || nombre === "") return;
+      const k = norm(nombre);
+      let r = t.rows.find((x) => norm(x.c[c0.id]) === k);
       if (!r) {
         r = { id: "r_" + uid(), c: {} };
-        r.c[col] = String(name).trim();
+        pon(r.c, c0, nombre);
         t.rows.push(r);
       }
-      return r.id;
+      c[col.id] = r.id;
     };
-    const num = (v) => {
-      const x = Number(v);
-      return Number.isFinite(x) ? x : 0;
-    };
+    const col = (t, nombres, tipos) => colDe(t, nombres, tipos || TXT);
+    const cS = {
+        fec: col(S, ["fecha"], ["date", "text"]),
+        veh: col(S, ["vehiculo"], ["relation"]),
+        tal: col(S, ["taller"], ["relation"]),
+        tip: col(S, ["tipo"]),
+        des: col(S, ["descripcion"]),
+        est: col(S, ["estatus de pago", "estatus", "estado"]),
+        km: col(S, ["km al servicio", "km", "kilometraje"], ["number"]),
+        not: col(S, ["nota", "notas"]),
+      },
+      M = g.M,
+      R = g.R,
+      mCon = col(M.t, ["concepto"]),
+      rNom = col(R.t, ["refaccion"]),
+      rCan = col(R.t, ["cantidad"], ["number"]),
+      rDet = col(R.t, ["detalle original", "detalle"]);
     notas.forEach((n) => {
       const s = n.servicio,
         id = "r_" + uid(),
-        c = { e_id: String(s.id).trim() };
-      if (s.fecha) c.e_fec = String(s.fecha);
-      if (s.vehiculo && V) c.e_veh = find(V, "h_nom", s.vehiculo);
-      if (s.taller && T) c.e_tal = find(T, "t_nom", s.taller);
-      if (s.tipo) c.e_tip = String(s.tipo);
-      if (s.descripcion) c.e_des = String(s.descripcion);
-      if (s.estatus) c.e_est = String(s.estatus);
-      if (s.km != null && s.km !== "") c.e_km = num(s.km);
-      if (s.nota) c.e_not = String(s.nota);
+        c = {};
+      pon(c, g.id, s.id);
+      pon(c, cS.fec, s.fecha);
+      liga(c, cS.veh, s.vehiculo);
+      liga(c, cS.tal, s.taller);
+      pon(c, cS.tip, s.tipo);
+      pon(c, cS.des, s.descripcion);
+      pon(c, cS.est, s.estatus);
+      pon(c, cS.km, s.km);
+      pon(c, cS.not, s.nota);
       S.rows.unshift({ id, c });
-      (n.mano_de_obra || []).forEach((x) =>
-        M.rows.unshift({
-          id: "r_" + uid(),
-          c: { m_con: String(x.concepto || "Mano de obra"), m_ser: id, m_imp: num(x.importe) },
-        }),
-      );
+      (n.mano_de_obra || []).forEach((x) => {
+        const c2 = {};
+        c2[M.rel.id] = id;
+        pon(c2, mCon, x.concepto || "Mano de obra");
+        pon(c2, M.imp, x.importe || 0);
+        M.t.rows.unshift({ id: "r_" + uid(), c: c2 });
+      });
       (n.refacciones || []).forEach((x) => {
-        const c2 = { r_nom: String(x.refaccion || ""), r_ser: id, r_imp: num(x.importe) };
-        if (x.cantidad != null && x.cantidad !== "") c2.r_can = num(x.cantidad);
-        if (x.detalle) c2.r_det = String(x.detalle);
-        R.rows.unshift({ id: "r_" + uid(), c: c2 });
+        const c2 = {};
+        c2[R.rel.id] = id;
+        pon(c2, rNom, x.refaccion);
+        pon(c2, R.imp, x.importe || 0);
+        pon(c2, rCan, x.cantidad);
+        pon(c2, rDet, x.detalle);
+        R.t.rows.unshift({ id: "r_" + uid(), c: c2 });
       });
     });
     dirty();
@@ -2698,14 +2830,15 @@
   };
   $("formNota").addEventListener("submit", (e) => {
     e.preventDefault();
-    const er = importarNota($("notaTexto").value);
+    const g = piezasNota(),
+      er = importarNota($("notaTexto").value);
     if (er) {
       $("notaError").textContent = er;
       return;
     }
     $("dlgNota").close();
-    goTab("s_ser");
-    toast("Nota agregada a Servicios", undoApp);
+    goTab(g.S.id);
+    toast("Nota agregada a " + g.S.name, undoApp);
   });
 
   $("btnUndo").onclick = undoApp;

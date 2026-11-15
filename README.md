@@ -12,6 +12,21 @@ Web para guardar tablas, relacionarlas entre sí y consultarlas desde un solo lu
 - Respaldo completo en un archivo, con restauración.
 - Tema claro, oscuro y alto contraste.
 
+## Funciones que aparecen según las tablas
+
+Dos botones se muestran solos cuando el libro abierto tiene las tablas y columnas que necesitan. Los nombres se reconocen sin importar mayúsculas ni acentos.
+
+**Generar mes** crea las filas de un periodo a partir de una lista de conceptos. Necesita:
+
+- Una tabla con una columna de texto `Periodo` y una relación hacia la tabla de conceptos. Si tiene `Estatus`, las filas nuevas quedan en Pendiente.
+- En la tabla de conceptos, una columna `Recurrencia` (Mensual, Anual, Único…). Con `Mes de pago`, los anuales solo se generan en su mes.
+
+**Importar nota** agrega un servicio con su mano de obra y sus refacciones a partir de un bloque de texto. Necesita:
+
+- Una tabla `Servicios` con una columna de texto `ID` o `Folio`.
+- Las tablas `Mano de obra` y `Refacciones`, cada una con una relación hacia Servicios y una columna numérica `Importe`.
+- Opcionales en Servicios: `Fecha`, `Vehículo` y `Taller` (relaciones), `Tipo`, `Descripción`, `Estatus de pago`, `KM al servicio` y `Nota`. En Refacciones: `Refacción`, `Cantidad` y `Detalle original`. En Mano de obra: `Concepto`.
+
 ## Dónde están los datos
 
 Este repositorio contiene solo el código y tres tablas de ejemplo. Los datos de cada persona se guardan en su propio navegador y nunca se suben aquí.

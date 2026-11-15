@@ -25,6 +25,9 @@ Al abrir la web se muestra la página de inicio (libros, reportes guardados y re
 - Todo respaldo pasa por `revisarEstado` antes de restaurarse. Si agregas un campo que se escribe en la página, revísalo ahí y escápalo con `esc` al pintarlo.
 - Si el navegador no deja guardar, se muestra el aviso `avisoGuardado`; no ocultes ese error.
 
+## Funciones según la forma del libro
+"Generar mes" e "Importar nota" no están atadas a ningún libro: `piezasGen` y `piezasNota` buscan las tablas y columnas por nombre (lista en el README) y el botón aparece solo si están. No uses identificadores fijos de tablas o columnas en el código; si agregas una función así, búscala por nombre y documenta los nombres en el README.
+
 ## Diseño y accesibilidad
 - Blanco y negro. Solo tres colores con significado: azul para positivos, rojo para negativos, amarillo para resaltado. Los reportes son la excepción y tienen paletas propias.
 - Todos los colores salen de las variables CSS definidas en `:root`; cada tema (claro, oscuro, alto contraste claro y oscuro) redefine las mismas variables.

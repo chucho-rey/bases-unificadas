@@ -285,10 +285,10 @@
 
 <dialog id="dlgGen" aria-labelledby="genTitulo">
   <form class="form" id="formGen">
-    <h2 id="genTitulo">Generar pagos del mes</h2>
+    <h2 id="genTitulo">Generar el mes</h2>
     <label>Periodo<input class="field" id="genMes" type="month" placeholder="AAAA-MM" pattern="\d{4}-\d{2}"></label>
     <p class="ayuda" id="genInfo"></p>
-    <p class="ayuda">Toma los conceptos de la tabla Conceptos: los recurrentes siempre, y los anuales solo en su Mes de pago.</p>
+    <p class="ayuda" id="genAyuda"></p>
     <p class="error" id="genError" role="alert"></p>
     <div class="fila"><button class="btn" type="button" data-close>Cancelar</button><button class="btn pri" type="submit">Generar</button></div>
   </form>

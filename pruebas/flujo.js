@@ -120,6 +120,118 @@ function comprobar(nombre, ok, detalle) {
     comprobar("restaura un respaldo propio", (await p.locator("#tabs .tab", { hasText: "Prueba" }).count()) === 1);
   } else comprobar("restaura un respaldo propio", false, "no se pudo leer el texto del respaldo");
 
+  console.log("Generar mes e Importar nota (libro inventado, sin identificadores fijos)");
+  const fila = (id, c) => ({ id, c });
+  const inventado = JSON.stringify({
+    app: "bases-unificadas",
+    formato: 1,
+    creado: new Date().toISOString(),
+    state: {
+      cur: "bx",
+      books: [
+        {
+          id: "bx",
+          name: "Inventado",
+          tables: [
+            {
+              id: "ta",
+              name: "Cuotas",
+              cols: [
+                { id: "a1", name: "Concepto", type: "relation", table: "tb" },
+                { id: "a2", name: "PERIODO", type: "text" },
+                { id: "a3", name: "Estatus", type: "select", options: ["Pagado"] },
+              ],
+              rows: [fila("ra1", { a1: "rb1", a2: "2030-01", a3: "Pagado" })],
+            },
+            {
+              id: "tb",
+              name: "Conceptos",
+              cols: [
+                { id: "b1", name: "Concepto", type: "text" },
+                { id: "b2", name: "recurrencia", type: "select", options: ["Mensual", "Anual", "Único"] },
+                { id: "b3", name: "Mes de pago", type: "select", options: ["Febrero", "Marzo"] },
+              ],
+              rows: [
+                fila("rb1", { b1: "Renta", b2: "Mensual" }),
+                fila("rb2", { b1: "Luz" }),
+                fila("rb3", { b1: "Seguro", b2: "Anual", b3: "Febrero" }),
+                fila("rb4", { b1: "Predial", b2: "Anual", b3: "Marzo" }),
+                fila("rb5", { b1: "Tenencia", b2: "Anual" }),
+                fila("rb6", { b1: "Mudanza", b2: "Único" }),
+              ],
+            },
+            {
+              id: "tc",
+              name: "Servicios",
+              cols: [
+                { id: "c1", name: "Folio", type: "text" },
+                { id: "c2", name: "Fecha", type: "date" },
+                { id: "c3", name: "Vehículo", type: "relation", table: "tf" },
+                { id: "c4", name: "Tipo", type: "select", options: ["Reparación"] },
+                { id: "c5", name: "Mano de obra", type: "sum", table: "td", rel: "d2", target: "d3" },
+                { id: "c6", name: "Refacciones", type: "sum", table: "te", rel: "e2", target: "e3" },
+                { id: "c7", name: "Total", type: "formula", expr: "{Mano de obra} + {Refacciones}" },
+              ],
+              rows: [fila("rc1", { c1: "NOTA-001" })],
+            },
+            {
+              id: "td",
+              name: "Mano de Obra",
+              cols: [
+                { id: "d1", name: "Concepto", type: "text" },
+                { id: "d2", name: "Servicio", type: "relation", table: "tc" },
+                { id: "d3", name: "Importe", type: "number" },
+              ],
+              rows: [],
+            },
+            {
+              id: "te",
+              name: "Refacciones",
+              cols: [
+                { id: "e1", name: "Refacción", type: "text" },
+                { id: "e2", name: "Servicio", type: "relation", table: "tc" },
+                { id: "e3", name: "Importe", type: "number" },
+                { id: "e4", name: "Cantidad", type: "number" },
+              ],
+              rows: [],
+            },
+            { id: "tf", name: "Vehículos", cols: [{ id: "f1", name: "Vehículo", type: "text" }], rows: [fila("rf1", { f1: "Camión rojo" })] },
+          ],
+        },
+      ],
+    },
+  });
+  await restaurar(inventado);
+  await p.click("#resOk");
+  await p.click("#resOk");
+  comprobar("aparecen los dos botones", (await p.locator("#btnGen").isVisible()) && (await p.locator("#btnNota").isVisible()));
+  await p.click("#btnGen");
+  comprobar("propone el mes siguiente al último", (await p.inputValue("#genMes")) === "2030-02", await p.inputValue("#genMes"));
+  const plan = await p.locator("#genInfo").textContent();
+  comprobar("planea 2 recurrentes y 1 anual, y avisa del anual sin mes", /Se crearán 3 filas en Cuotas, en Pendiente: 2 recurrentes y 1 anual de febrero\. 1 anual sin mes/.test(plan), plan);
+  await p.click("#formGen button[type=submit]");
+  comprobar("crea las 3 filas y las deja filtradas", (await p.locator("#conteo").textContent()) === "3 de 4 filas", await p.locator("#conteo").textContent());
+  comprobar("quedan en Pendiente", (await p.locator("#grid tbody .pill", { hasText: "Pendiente" }).count()) === 3);
+  await p.click("#btnGen");
+  await p.fill("#genMes", "2030-02");
+  await p.click("#formGen button[type=submit]");
+  comprobar("no duplica el mismo mes", (await p.locator("#genError").textContent()).includes("No hay filas"));
+  await p.click("#dlgGen [data-close]");
+
+  await p.click("#btnNota");
+  await p.fill("#notaTexto", JSON.stringify({ servicio: { id: "NOTA-002", fecha: "2030-02-03", vehiculo: "camion rojo", tipo: "Mantenimiento", km: 1200 }, mano_de_obra: [{ concepto: "Afinación", importe: 500 }], refacciones: [{ refaccion: "Filtro", importe: 150, cantidad: 2 }, { refaccion: "Aceite", importe: 350 }] }));
+  await p.click("#formNota button[type=submit]");
+  const serv = p.locator("#grid tbody tr").first();
+  comprobar("agrega el servicio", (await serv.locator('input[data-cell="c1"]').inputValue()) === "NOTA-002");
+  comprobar("suma mano de obra y refacciones", (await serv.locator('[data-calc="c7"]').textContent()) === "1,000", await serv.locator('[data-calc="c7"]').textContent());
+  comprobar("reconoce el vehículo aunque cambien acentos y mayúsculas", (await serv.locator("[data-pick]").textContent()) === "Camión rojo");
+  comprobar("agrega la opción nueva a la lista de Tipo", (await serv.locator("[data-opt]").textContent()) === "Mantenimiento");
+  await p.click("#btnNota");
+  await p.fill("#notaTexto", '{"servicio":{"id":"nota-002"}}');
+  await p.click("#formNota button[type=submit]");
+  comprobar("no repite un folio que ya existe", (await p.locator("#notaError").textContent()).includes("Ya existe"));
+  await p.click("#dlgNota [data-close]");
+
   console.log("Aviso de guardado");
   await p.evaluate(() => {
     Storage.prototype.setItem = function () {
