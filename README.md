@@ -32,6 +32,8 @@ Dos botones se muestran solos cuando el libro abierto tiene las tablas y columna
 
 Este repositorio contiene solo el código y tres tablas de ejemplo. Los datos de cada persona se guardan en su propio navegador y nunca se suben aquí.
 
+Dentro del navegador se guardan en IndexedDB, que tiene espacio de sobra, y en una segunda copia en `localStorage` mientras quepa. Al abrir se usa la más reciente de las dos. Borrar los datos de navegación del sitio borra ambas: por eso existe el respaldo.
+
 Para llevar los datos de un dispositivo a otro: Opciones › Respaldo › Crear respaldo en el primero, y Restaurar respaldo en el segundo.
 
 ## Cómo está hecha

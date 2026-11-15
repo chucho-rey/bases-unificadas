@@ -323,16 +323,69 @@ function comprobar(nombre, ok, detalle) {
   comprobar("no repite un folio que ya existe", (await p.locator("#notaError").textContent()).includes("Ya existe"));
   await p.click("#dlgNota [data-close]");
 
-  console.log("Aviso de guardado");
+  console.log("Guardado con más espacio");
+  const enBD = () =>
+    p.evaluate(
+      () =>
+        new Promise((res) => {
+          const rq = indexedDB.open("bases-unificadas", 1);
+          rq.onupgradeneeded = () => rq.result.createObjectStore("datos");
+          rq.onsuccess = () => {
+            const g = rq.result.transaction("datos").objectStore("datos").get("bases-unificadas-v1");
+            g.onsuccess = () => res(g.result ? JSON.parse(g.result) : null);
+            g.onerror = () => res(null);
+          };
+          rq.onerror = () => res(null);
+        }),
+    );
+  await p.waitForTimeout(500);
+  const guardado = await enBD();
+  comprobar("el estado está en el almacén grande", !!guardado && guardado.books[0].name === "Inventado", guardado && guardado.books.map((b) => b.name));
   await p.evaluate(() => {
     Storage.prototype.setItem = function () {
       throw new DOMException("lleno", "QuotaExceededError");
     };
   });
+  await p.click('#tabs [data-tab="tf"]');
   await p.click("#btnFila");
-  await p.waitForTimeout(500);
-  comprobar("avisa cuando no se puede guardar", await p.locator("#avisoGuardado").isVisible());
+  await p.waitForTimeout(600);
+  comprobar("si la copia chica no cabe, no hay aviso", await p.locator("#avisoGuardado").isHidden());
+  await p.reload();
+  await p.click("#iniSeguir");
+  await p.click('#tabs [data-tab="tf"]');
+  comprobar("y el cambio sigue ahí al recargar", (await conteo()) === "2 filas", await conteo());
+  await p.evaluate(() => {
+    Storage.prototype.setItem = function () {
+      throw new DOMException("lleno", "QuotaExceededError");
+    };
+    IDBObjectStore.prototype.put = function () {
+      throw new DOMException("lleno", "QuotaExceededError");
+    };
+  });
+  await p.click("#btnFila");
+  await p.waitForTimeout(600);
+  comprobar("avisa cuando no se puede guardar en ningún lado", await p.locator("#avisoGuardado").isVisible());
   comprobar("el aviso no ensancha la página", (await ancho()) <= 0, await ancho());
+
+  console.log("Datos de antes (solo en localStorage)");
+  const ctx2 = await nav.newContext({ viewport: { width: 375, height: 740 } });
+  const p2 = await ctx2.newPage();
+  p2.on("pageerror", (e) => errores.push(e.message));
+  await p2.goto(URL_APP);
+  await p2.evaluate(() => {
+    localStorage.setItem(
+      "bases-unificadas-v1",
+      JSON.stringify({ cur: "bv", books: [{ id: "bv", name: "De antes", tables: [{ id: "tv", name: "Vieja", cols: [{ id: "cv", name: "Nombre", type: "text" }], rows: [{ id: "rv", c: { cv: "sigo aquí" } }] }] }] }),
+    );
+  });
+  await p2.reload();
+  comprobar("abre los datos que ya estaban", (await p2.locator("#iniLibros .ini-txt b").textContent()) === "De antes");
+  await p2.waitForTimeout(300);
+  await p2.evaluate(() => localStorage.clear());
+  await p2.reload();
+  await p2.click("#iniSeguir");
+  comprobar("y ya quedaron copiados al almacén grande", (await p2.locator('#grid input[data-cell="cv"]').inputValue()) === "sigo aquí");
+  await ctx2.close();
 
   comprobar("sin errores en la página", errores.length === 0, errores);
   await nav.close();

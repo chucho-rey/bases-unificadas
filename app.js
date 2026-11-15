@@ -1,4 +1,4 @@
-(function () {
+(async function () {
   const KEY = "bases-unificadas-v1",
     PAGE = 100;
   const $ = (id) => document.getElementById(id);
@@ -74,11 +74,77 @@
     return pr;
   }
 
-  let state;
+  /* ---------- dónde se guarda ----------
+     El estado se guarda en dos lugares del navegador:
+     - IndexedDB: el principal. Tiene mucho más espacio, así que no se llena con los reportes guardados.
+     - localStorage: una copia, mientras quepa. Es donde vivía todo antes, y se escribe al instante, lo
+       que protege el último cambio si la página se cierra de golpe.
+     Al abrir se lee de los dos y se usa el más reciente (state.mod). Así, quien llega con datos de antes
+     los conserva sin hacer nada, y si uno de los dos falla el otro sigue sirviendo. */
+  const BD = "bases-unificadas",
+    ALMACEN = "datos";
+  function abrirBD() {
+    return new Promise((res) => {
+      let listo = false;
+      const fin = (x) => {
+        if (listo) return;
+        listo = true;
+        res(x);
+      };
+      setTimeout(() => fin(null), 2500); /* hay navegadores que nunca contestan si lo tienen bloqueado */
+      try {
+        const rq = indexedDB.open(BD, 1);
+        rq.onupgradeneeded = () => rq.result.createObjectStore(ALMACEN);
+        rq.onsuccess = () => fin(rq.result);
+        rq.onerror = rq.onblocked = () => fin(null);
+      } catch (e) {
+        fin(null);
+      }
+    });
+  }
+  const bd = await abrirBD();
+  function leerBD() {
+    return new Promise((res) => {
+      if (!bd) return res(null);
+      try {
+        const rq = bd.transaction(ALMACEN).objectStore(ALMACEN).get(KEY);
+        rq.onsuccess = () => res(rq.result || null);
+        rq.onerror = () => res(null);
+      } catch (e) {
+        res(null);
+      }
+    });
+  }
+  function escribirBD(txt) {
+    return new Promise((res) => {
+      if (!bd) return res(false);
+      try {
+        const tx = bd.transaction(ALMACEN, "readwrite");
+        tx.objectStore(ALMACEN).put(txt, KEY);
+        tx.oncomplete = () => res(true);
+        tx.onerror = tx.onabort = () => res(false);
+      } catch (e) {
+        res(false);
+      }
+    });
+  }
+  const leeEstado = (txt) => {
+    try {
+      const o = JSON.parse(txt);
+      return o && typeof o === "object" ? o : null;
+    } catch (e) {
+      return null;
+    }
+  };
+  let deLS = null;
   try {
-    state = JSON.parse(localStorage.getItem(KEY));
+    deLS = leeEstado(localStorage.getItem(KEY));
   } catch (e) {}
-  if (!state || typeof state !== "object") state = {};
+  const deBD = leeEstado(await leerBD());
+  let state = deBD && (!deLS || (deBD.mod || 0) >= (deLS.mod || 0)) ? deBD : deLS;
+  /* Datos que solo estaban en localStorage: se copian al almacén principal desde el primer momento. */
+  const migrar = !!bd && !!state && state === deLS;
+  if (!state) state = {};
   if (!Array.isArray(state.books)) {
     const ej = Array.isArray(state.tables)
       ? { id: "b_ej", name: "Ejemplo", tables: state.tables, demo: !!state.demo }
@@ -146,25 +212,35 @@
 
   const agg = new Map();
   let saveT,
+    desde = 0,
     pendiente = false;
-  /* Escribe de inmediato. Si el navegador no deja guardar (sin espacio o almacenamiento bloqueado), avisa. */
+  /* Escribe de inmediato en los dos lugares. Solo avisa si no se pudo guardar en ninguno: que la copia
+     de localStorage no quepa es normal cuando hay muchos datos. */
   function guardarYa() {
     clearTimeout(saveT);
     if (!pendiente) return;
     pendiente = false;
-    let ok = true;
+    state.mod = Date.now();
+    const txt = JSON.stringify(state);
+    let enLS = true;
     try {
-      localStorage.setItem(KEY, JSON.stringify(state));
+      localStorage.setItem(KEY, txt);
     } catch (e) {
-      ok = false;
+      enLS = false;
     }
-    $("avisoGuardado").hidden = ok;
+    escribirBD(txt).then((enBD) => {
+      $("avisoGuardado").hidden = enBD || enLS;
+    });
   }
+  /* Guarda 300 ms después del último cambio, pero nunca espera más de 2 segundos desde el primero:
+     así una captura continua no pospone el guardado indefinidamente. */
   function save() {
     agg.clear();
+    if (!pendiente) desde = Date.now();
     pendiente = true;
     clearTimeout(saveT);
-    saveT = setTimeout(guardarYa, 300);
+    if (Date.now() - desde >= 2000) guardarYa();
+    else saveT = setTimeout(guardarYa, 300);
   }
   /* Al cerrar, recargar o cambiar de aplicación se guarda sin esperar. */
   window.addEventListener("pagehide", guardarYa);
@@ -3299,6 +3375,7 @@
   );
 
   completarArbol();
+  if (migrar) escribirBD(JSON.stringify(state));
   conDescargas();
   applyPrefs();
   goTab(ui.tab);

@@ -15,17 +15,18 @@ Al abrir la web se muestra la página de inicio (libros, reportes guardados y re
 ## Regla más importante: ningún dato real en el código
 - El repositorio es público. Nunca agregues datos del usuario (pagos, servicios, nombres de personas, empresas, sucursales, proveedores, libros personales) a `index.html` ni a ningún archivo.
 - Los únicos datos permitidos en el código son las tres tablas de ejemplo: Ventas, Clientes y Productos. Lo mismo vale para `docs/`: los ejemplos de los lineamientos y del plan son inventados, no la estructura real de ningún libro.
-- Los datos reales viven en el `localStorage` del navegador de cada persona y entran por Opciones › Respaldo › Restaurar.
+- Los datos reales viven en el navegador de cada persona y entran por Restaurar respaldo.
 - No subas archivos de respaldo (`*.json` con `"app":"bases-unificadas"`).
 - Las pruebas solo usan las tablas de ejemplo o datos inventados.
 
 ## Compatibilidad de datos
-- El estado guardado (clave `bases-unificadas-v1`) debe seguir abriendo después de cada cambio. Si cambias la forma de los datos, agrega una migración que convierta el estado anterior; no rompas respaldos existentes.
+- El estado se guarda con la clave `bases-unificadas-v1` en dos lugares: IndexedDB (base `bases-unificadas`, almacén `datos`), que es el principal, y `localStorage`, que es una copia mientras quepa. Al abrir se usa el más reciente según `state.mod`. No quites ninguno de los dos: la copia de `localStorage` es la que trae los datos de quien usó versiones anteriores y la que protege el último cambio al cerrar.
+- El estado guardado debe seguir abriendo después de cada cambio. Si cambias la forma de los datos, agrega una migración que convierta el estado anterior; no rompas respaldos existentes.
 - Tipos de columna: text, number, date, select, multi, check, relation, lookup, formula, sum.
 - Cada columna puede llevar `pie` (`sum`, `avg` o `count`): el total que muestra al pie. También es opcional.
 - Cada tabla puede llevar `vistas` (búsqueda, filtro y orden con nombre). Es un campo opcional: una tabla sin él sigue abriendo igual.
 - Todo respaldo pasa por `revisarEstado` antes de restaurarse. Si agregas un campo que se escribe en la página, revísalo ahí y escápalo con `esc` al pintarlo.
-- Si el navegador no deja guardar, se muestra el aviso `avisoGuardado`; no ocultes ese error.
+- Si no se pudo guardar en ninguno de los dos lugares, se muestra el aviso `avisoGuardado`; no ocultes ese error.
 
 ## Funciones según la forma del libro
 "Generar mes" e "Importar nota" no están atadas a ningún libro: `piezasGen` y `piezasNota` buscan las tablas y columnas por nombre (lista en el README) y el botón aparece solo si están. No uses identificadores fijos de tablas o columnas en el código; si agregas una función así, búscala por nombre y documenta los nombres en el README.
