@@ -61,6 +61,7 @@
   </div>
 
   <div id="area" style="display:flex;flex-direction:column;gap:14px">
+    <div class="vistas" id="vistas" role="group" aria-label="Vistas guardadas de esta tabla"></div>
     <div class="busca">
       <input class="field" id="buscar" type="search" placeholder="Buscar en la tabla" aria-label="Buscar en la tabla">
       <button class="btn" id="btnFiltro" type="button" aria-expanded="false" aria-controls="filtro">Filtrar</button>
@@ -161,6 +162,21 @@
     <label>O pega el contenido<textarea class="field" id="impTexto" rows="5" placeholder="Nombre,Ciudad&#10;Ana,Puebla"></textarea></label>
     <p class="error" id="impError" role="alert"></p>
     <div class="fila"><button class="btn" type="button" data-close>Cancelar</button><button class="btn pri" type="submit">Importar</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgVista" aria-labelledby="visT">
+  <form class="form" id="formVista">
+    <h2 id="visT">Guardar vista</h2>
+    <label>Nombre<input class="field" id="visNombre" type="text" autocomplete="off" placeholder="Por pagar"></label>
+    <p class="ayuda">Una vista recuerda la búsqueda, el filtro y el orden que están en pantalla, para volver a ellos con un toque.</p>
+    <p class="ayuda" id="visInfo"></p>
+    <p class="error" id="visError" role="alert"></p>
+    <div class="fila">
+      <button class="btn izq" id="visBorrar" type="button">Eliminar vista</button>
+      <button class="btn" type="button" data-close>Cancelar</button>
+      <button class="btn pri" id="visOk" type="submit">Guardar</button>
+    </div>
   </form>
 </dialog>
 

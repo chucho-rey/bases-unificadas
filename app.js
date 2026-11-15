@@ -607,6 +607,7 @@
     $("vacio").hidden = !!t;
     $("area").hidden = !t;
     if (!t) return;
+    pintarVistas(t);
     const keep = ui.f.col;
     $("fCol").innerHTML =
       '<option value="">Columna…</option>' +
@@ -681,6 +682,143 @@
     $("fOp").value = "has";
     render();
   }
+
+  /* ---------- vistas guardadas ----------
+     Una vista es una búsqueda, un filtro y un orden con nombre, guardados en su tabla (t.vistas).
+     No hay "vista activa" que recordar: el botón de una vista se marca cuando lo que está en pantalla
+     coincide con lo que guardó. */
+  const SIN_F = () => ({ col: "", op: "has", val: "" });
+  const hayFiltro = () => !!(ui.f.col && ui.f.val !== "");
+  function vistaAhora() {
+    const o = (x) => (x.col ? { col: x.col, dir: x.dir } : { col: "", dir: 1 });
+    return {
+      q: ui.q.trim(),
+      f: hayFiltro() ? { col: ui.f.col, op: ui.f.op, val: ui.f.val } : SIN_F(),
+      s: o(ui.sort),
+      s2: o(ui.sort2),
+    };
+  }
+  const igual = (a, b) =>
+    a.col === b.col && (!a.col || (a.dir === b.dir && a.op === b.op && a.val === b.val));
+  /* Una vista sin orden propio coincide con cualquier orden. */
+  function coincide(v, a) {
+    return v.q === a.q && igual(v.f, a.f) && (!v.s.col || (igual(v.s, a.s) && igual(v.s2, a.s2)));
+  }
+  function pintarVistas(t) {
+    const a = vistaAhora(),
+      vs = t.vistas || [],
+      act = vs.find((v) => coincide(v, a)),
+      marca = (on) => 'aria-pressed="' + on + '">' + (on ? '<span aria-hidden="true">✓ </span>' : "");
+    $("vistas").innerHTML =
+      '<button type="button" class="btn sm" data-todas ' +
+      marca(!act && !a.q && !a.f.col) +
+      "Todas las filas</button>" +
+      vs
+        .map(
+          (v) =>
+            '<button type="button" class="btn sm" data-vista="' +
+            v.id +
+            '" ' +
+            marca(v === act) +
+            esc(v.name) +
+            "</button>",
+        )
+        .join("") +
+      (act
+        ? '<button type="button" class="btn sm" data-editar="' +
+          act.id +
+          '" aria-label="Editar la vista ' +
+          esc(act.name) +
+          '">Editar vista</button>'
+        : '<button type="button" class="btn sm" data-guardar>Guardar vista</button>');
+  }
+  function aplicarVista(v) {
+    const t = cur();
+    ui.q = v.q;
+    ui.f = { col: colById(t, v.f.col) ? v.f.col : "", op: v.f.op, val: v.f.val };
+    if (v.s.col) {
+      ui.sort = { col: v.s.col, dir: v.s.dir };
+      ui.sort2 = { col: v.s2.col, dir: v.s2.dir };
+    }
+    ui.limit = PAGE;
+    $("buscar").value = ui.q;
+    $("fVal").value = ui.f.val;
+    $("fOp").value = ui.f.op;
+    if (hayFiltro()) {
+      $("filtro").hidden = false;
+      $("btnFiltro").setAttribute("aria-expanded", "true");
+    }
+    render();
+  }
+  let vistaEdit = null;
+  function abrirVista(v) {
+    const t = cur(),
+      a = vistaAhora(),
+      d = descVista(t),
+      vacia = !v && !a.q && !a.f.col && !a.s.col;
+    vistaEdit = v || null;
+    $("visT").textContent = v ? "Editar vista" : "Guardar vista";
+    $("visNombre").value = v ? v.name : "";
+    $("visInfo").textContent =
+      (ui.q.trim() || hayFiltro() ? d.filtro : "Sin búsqueda ni filtro") +
+      " · Orden: " +
+      d.orden.toLowerCase() +
+      ".";
+    $("visError").textContent = vacia
+      ? "Primero busca, filtra u ordena la tabla. Después vuelve aquí para guardar esa vista."
+      : "";
+    $("visOk").disabled = vacia;
+    $("visBorrar").hidden = !v;
+    $("dlgVista").showModal();
+  }
+  $("vistas").addEventListener("click", (e) => {
+    const b = e.target.closest("button"),
+      t = cur();
+    if (!b || !t) return;
+    const busca = (id) => (t.vistas || []).find((v) => v.id === id);
+    if ("todas" in b.dataset) {
+      $("filtro").hidden = true;
+      $("btnFiltro").setAttribute("aria-expanded", "false");
+      goTab(t.id);
+      $("vistas").querySelector("[data-todas]").focus();
+    } else if (b.dataset.vista) {
+      const v = busca(b.dataset.vista);
+      if (!v) return;
+      aplicarVista(v);
+      const again = $("vistas").querySelector('[data-vista="' + v.id + '"]');
+      if (again) again.focus();
+    } else if (b.dataset.editar) abrirVista(busca(b.dataset.editar));
+    else abrirVista();
+  });
+  $("formVista").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const t = cur(),
+      n = $("visNombre").value.trim();
+    if (!n) {
+      $("visError").textContent = "Escribe un nombre para la vista.";
+      return;
+    }
+    if ((t.vistas || []).some((v) => v !== vistaEdit && v.name.toLowerCase() === n.toLowerCase())) {
+      $("visError").textContent = "Ya hay una vista con ese nombre en esta tabla.";
+      return;
+    }
+    snap();
+    if (vistaEdit) vistaEdit.name = n;
+    else (t.vistas = t.vistas || []).push(Object.assign({ id: "v_" + uid(), name: n }, vistaAhora()));
+    $("dlgVista").close();
+    save();
+    render();
+  });
+  $("visBorrar").onclick = () => {
+    const t = cur();
+    snap();
+    t.vistas = t.vistas.filter((v) => v !== vistaEdit);
+    if (!t.vistas.length) delete t.vistas;
+    $("dlgVista").close();
+    save();
+    render();
+    toast("Vista eliminada", undoApp);
+  };
 
   /* ---------- rejilla ---------- */
   $("grid").addEventListener("change", (e) => {
@@ -997,8 +1135,17 @@
       t.rows.forEach((r) => {
         delete r.c[id];
       });
-      if (ui.sort.col === id) ui.sort.col = "";
-      if (ui.f.col === id) ui.f.col = "";
+      if (ui.sort.col === id) ui.sort = { col: ui.sort2.col, dir: ui.sort2.dir };
+      if (ui.sort.col === id || ui.sort2.col === id) ui.sort2 = { col: "", dir: 1 };
+      if (ui.sort.col === id) ui.sort = { col: "", dir: 1 };
+      if (ui.f.col === id) ui.f = SIN_F();
+      /* Las vistas guardadas sueltan la columna eliminada. */
+      (t.vistas || []).forEach((v) => {
+        if (v.f.col === id) v.f = SIN_F();
+        if (v.s.col === id) v.s = v.s2;
+        if (v.s.col === id || v.s2.col === id) v.s2 = { col: "", dir: 1 };
+        if (v.s.col === id) v.s = { col: "", dir: 1 };
+      });
       $("dlgCol").close();
       dirty();
       render();
@@ -1847,6 +1994,28 @@
         if (t.fmt !== undefined && !(obj(t.fmt) && obj(t.fmt.cells) && obj(t.fmt.rows) && obj(t.fmt.cols)))
           delete t.fmt;
         if (t.view !== undefined && !obj(t.view)) delete t.view;
+        if (t.vistas !== undefined) {
+          const ord = (x) =>
+            obj(x) && x.col ? { col: txt(x.col, ""), dir: x.dir === -1 ? -1 : 1 } : { col: "", dir: 1 };
+          t.vistas = (Array.isArray(t.vistas) ? t.vistas : [])
+            .filter((v) => obj(v) && id(v.id))
+            .map((v) => ({
+              id: v.id,
+              name: txt(v.name, "Vista"),
+              q: txt(v.q, ""),
+              f:
+                obj(v.f) && v.f.col
+                  ? {
+                      col: txt(v.f.col, ""),
+                      op: ["has", "eq", "gt", "lt"].includes(v.f.op) ? v.f.op : "has",
+                      val: txt(v.f.val, ""),
+                    }
+                  : { col: "", op: "has", val: "" },
+              s: ord(v.s),
+              s2: ord(v.s2),
+            }));
+          if (!t.vistas.length) delete t.vistas;
+        }
       }
     }
     const nodo = (n, raiz) => {

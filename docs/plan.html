@@ -54,29 +54,33 @@ ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 
   <section class="sig" aria-labelledby="sig">
     <h2 id="sig" style="margin:0">Siguiente paso</h2>
-    <h3>Publicar la web en un sitio propio</h3>
-    <p>Es lo que más cosas destraba: imprimir, tener un enlace fijo para celular y computadora, y un guardado más sólido. El respaldo completo ya existe, así que la mudanza se puede hacer sin perder datos.</p>
+    <h3>Totales al pie de tabla</h3>
+    <p>Suma, promedio y conteo por columna, respetando la búsqueda, el filtro y la vista en pantalla. Con las vistas guardadas ya hechas, es lo que falta para responder "cuánto es" sin generar un reporte.</p>
     <ul>
-      <li>Antes de empezar: crea un respaldo desde Opciones y guárdalo fuera del navegador.</li>
-      <li>Elegir dónde se hospeda (por ejemplo GitHub Pages).</li>
-      <li>Restaurar el respaldo en el sitio nuevo.</li>
+      <li>Elegir por columna qué se muestra: suma, promedio o conteo.</li>
+      <li>Que el pie se quede a la vista al desplazar la tabla.</li>
+      <li>Incluirlo en la vista de impresión.</li>
     </ul>
   </section>
 
   <section aria-labelledby="hecho">
     <h2 id="hecho">Ya funciona</h2>
     <ul>
+      <li>Página de inicio con los libros, los reportes recientes y el estado del respaldo.</li>
       <li>Tablas editables con buscar, filtrar y ordenar en dos niveles.</li>
+      <li>Vistas guardadas: búsqueda, filtro y orden con nombre, a un toque.</li>
       <li>Relaciones, referencias, fórmulas y sumas entre tablas.</li>
       <li>Columnas de selección, selección múltiple y casilla.</li>
       <li>Libros, secciones y salas en la barra lateral, ahora editables.</li>
       <li>Datos reales cargados en tres libros.</li>
-      <li>Pagos por periodo con botón para generar el mes.</li>
-      <li>Importar notas de servicio desglosadas por Claude.</li>
+      <li>Generar el mes e importar notas de servicio, en cualquier libro que tenga las tablas necesarias.</li>
       <li>Reportes con paletas, guardado e información de cada uno.</li>
       <li>Respaldo completo: descargar y restaurar todo en un archivo.</li>
       <li>Descarga directa de CSV y de respaldos.</li>
       <li>Deshacer y rehacer; temas, alto contraste, tamaño de letra y formato.</li>
+      <li>Web publicada con GitHub Pages, con impresión y descargas.</li>
+      <li>Guardado al cerrar o recargar, y aviso si el navegador no deja guardar.</li>
+      <li>Respaldos revisados antes de restaurarse y prueba automática de los flujos.</li>
     </ul>
   </section>
 
@@ -99,16 +103,24 @@ ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
       </div></div>
 
       <div class="fase"><span class="n">4</span><div>
-        <div class="cab"><h3>Publicar en sitio propio</h3><span class="pill now">Siguiente</span></div>
+        <div class="cab"><h3>Publicar en sitio propio</h3><span class="pill ok">Hecho</span></div>
         <ul>
-          <li>Hospedaje estático gratuito.</li>
-          <li>Activar el botón Imprimir.</li>
-          <li>Motor SQLite en el navegador para consultas más rápidas.</li>
-          <li>Guardado más robusto que el actual.</li>
+          <li>Publicada con GitHub Pages; el botón Imprimir ya está activo ahí.</li>
+          <li>Página de inicio y código separado en tres archivos.</li>
+          <li>Se pospone: motor SQLite. Con el tamaño actual de las tablas no hace falta.</li>
         </ul>
       </div></div>
 
       <div class="fase"><span class="n">5</span><div>
+        <div class="cab"><h3>Consultar mejor las tablas</h3><span class="pill now">Siguiente</span></div>
+        <ul>
+          <li>Hecho: vistas guardadas.</li>
+          <li>Sigue: totales al pie de tabla.</li>
+          <li>Después: guardado con más espacio que el actual, sin perder lo que ya hay.</li>
+        </ul>
+      </div></div>
+
+      <div class="fase"><span class="n">6</span><div>
         <div class="cab"><h3>Reportes completos</h3><span class="pill">Después</span></div>
         <ul>
           <li>Impresión real con encabezado, totales y saltos de página.</li>
@@ -119,7 +131,7 @@ ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
         </ul>
       </div></div>
 
-      <div class="fase"><span class="n">6</span><div>
+      <div class="fase"><span class="n">7</span><div>
         <div class="cab"><h3>Conectar la IA</h3><span class="pill">Al final</span></div>
         <ul>
           <li>Preguntas sobre los datos en lenguaje normal.</li>
@@ -134,8 +146,6 @@ ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     <h2 id="ideas">Ideas sin fecha</h2>
     <div class="ideas">
       <div class="idea"><h3>Tablas</h3><ul>
-        <li><strong>Vistas guardadas:</strong> "Por pagar", "Tarjetas", "Solo leídos", con su filtro y orden. Es la más útil de la lista.</li>
-        <li><strong>Totales al pie:</strong> suma, promedio y conteo por columna, respetando el filtro.</li>
         <li><strong>Agrupar filas:</strong> plegadas por un campo, con subtotal por grupo.</li>
         <li><strong>Tablero y calendario:</strong> filas en columnas por estatus o por fecha.</li>
         <li><strong>Ocultar y reordenar columnas.</strong></li>
@@ -158,7 +168,6 @@ ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
   <section aria-labelledby="dec">
     <h2 id="dec">Decisiones pendientes</h2>
     <ol>
-      <li>¿Dónde se hospedará la web?</li>
       <li>Reporte en diapositivas: ¿se expone desde la web o necesitas un archivo de PowerPoint?</li>
       <li>Impresión: ¿carta vertical, horizontal o ambas?</li>
       <li>¿Compartido debe compartirse de verdad con otras personas, o basta como sección?</li>
@@ -167,7 +176,7 @@ ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 
   <section class="nota" aria-label="Límites actuales">
     <p><strong>Límites actuales</strong></p>
-    <p>Los datos viven solo en el navegador donde abres la web, por eso el respaldo es importante. Dentro de Claude todavía no se puede imprimir; se resuelve en la fase 4.</p>
+    <p>Los datos viven solo en el navegador donde abres la web, por eso el respaldo es importante. Dentro de Claude no se puede imprimir: se imprime desde la web publicada.</p>
   </section>
 </main>
 

@@ -1343,3 +1343,17 @@ a.btn {
   text-decoration: none;
   color: var(--fg);
 }
+
+/* ---------- vistas guardadas ---------- */
+.vistas {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.vistas .btn {
+  flex: none;
+}
+.vistas .btn:focus-visible {
+  outline-offset: -3px;
+}

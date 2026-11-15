@@ -53,7 +53,7 @@ td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
 <main>
   <header>
     <h1>Lineamientos de Bases unificadas</h1>
-    <p class="meta">Versión 1 · 15 de noviembre de 2026</p>
+    <p class="meta">Versión 2 · 15 de noviembre de 2026</p>
   </header>
 
   <section>
@@ -70,26 +70,22 @@ td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
   <section>
     <h2>Estructura de la información</h2>
     <div class="wrap"><table>
-      <thead><tr><th>Nivel</th><th>Qué es</th><th>Ejemplo actual</th></tr></thead>
+      <thead><tr><th>Nivel</th><th>Qué es</th><th>Ejemplo</th></tr></thead>
       <tbody>
         <tr><td>Sección</td><td>Los dos grandes apartados de la barra lateral.</td><td>Personal, Compartido</td></tr>
-        <tr><td>Sala</td><td>Agrupa libros de un mismo ámbito. Puede tener subsalas.</td><td>Oficina › Egresos, Vehículos</td></tr>
-        <tr><td>Libro</td><td>Conjunto de tablas que se relacionan entre sí.</td><td>Servicios de vehículos</td></tr>
-        <tr><td>Tabla</td><td>Lista de registros del mismo tipo.</td><td>Servicios, Refacciones</td></tr>
-        <tr><td>Fila y columna</td><td>Un registro y cada uno de sus datos.</td><td>SERVICIO-001 · Total</td></tr>
+        <tr><td>Sala</td><td>Agrupa libros de un mismo ámbito. Puede tener subsalas.</td><td>Negocio › Compras</td></tr>
+        <tr><td>Libro</td><td>Conjunto de tablas que se relacionan entre sí.</td><td>Ejemplo</td></tr>
+        <tr><td>Tabla</td><td>Lista de registros del mismo tipo.</td><td>Ventas, Clientes</td></tr>
+        <tr><td>Fila y columna</td><td>Un registro y cada uno de sus datos.</td><td>V-001 · Total</td></tr>
       </tbody>
     </table></div>
-    <h3>Mapa actual</h3>
+    <h3>Mapa de ejemplo</h3>
     <div class="arbol">Personal
-  Mis Libros                Libros
+  Ejemplo                   Ventas · Clientes · Productos
 Compartido
-  Oficina
-    Egresos
-      Gastos                Ventas · Clientes · Productos
-    Vehículos
-      Servicios de vehículos
-                            Servicios · Refacciones · Mano de obra
-                            Vehículos · Talleres</div>
+  Negocio
+    Compras
+      Pedidos               Pedidos · Proveedores</div>
     <ul>
       <li>Las tablas solo se relacionan dentro de su mismo libro. Los libros todavía no se conectan entre ellos.</li>
       <li>La primera columna de cada tabla es el nombre del registro: es lo que se muestra cuando otra tabla lo referencia.</li>
@@ -100,12 +96,12 @@ Compartido
       <thead><tr><th>Tipo</th><th>Uso</th></tr></thead>
       <tbody>
         <tr><td>Texto, Número, Fecha</td><td>Datos que se capturan a mano.</td></tr>
-        <tr><td>Selección, Selección múltiple</td><td>Una o varias opciones de una lista propia de la columna. Ej.: Estado, Serie, Género. Se muestran como etiquetas en blanco y negro.</td></tr>
-        <tr><td>Casilla</td><td>Sí o no. Ej.: En biblioteca física.</td></tr>
-        <tr><td>Relación</td><td>Apunta a una fila de otra tabla. Ej.: el vehículo de un servicio.</td></tr>
-        <tr><td>Referencia</td><td>Trae una columna de la fila relacionada. Ej.: la fecha del servicio en cada refacción.</td></tr>
-        <tr><td>Fórmula</td><td>Calcula con columnas de la misma fila. Ej.: <code>{Mano de obra} + {Refacciones}</code>.</td></tr>
-        <tr><td>Suma de otra tabla</td><td>Suma las filas de otra tabla que apuntan a esta. Ej.: gasto total por vehículo.</td></tr>
+        <tr><td>Selección, Selección múltiple</td><td>Una o varias opciones de una lista propia de la columna. Ej.: Estatus, Categoría. Se muestran como etiquetas en blanco y negro.</td></tr>
+        <tr><td>Casilla</td><td>Sí o no. Ej.: Entregado.</td></tr>
+        <tr><td>Relación</td><td>Apunta a una fila de otra tabla. Ej.: el cliente de una venta.</td></tr>
+        <tr><td>Referencia</td><td>Trae una columna de la fila relacionada. Ej.: la ciudad del cliente en cada venta.</td></tr>
+        <tr><td>Fórmula</td><td>Calcula con columnas de la misma fila. Ej.: <code>{Cantidad} * {Precio}</code>.</td></tr>
+        <tr><td>Suma de otra tabla</td><td>Suma las filas de otra tabla que apuntan a esta. Ej.: total vendido por cliente.</td></tr>
       </tbody>
     </table></div>
   </section>
@@ -116,15 +112,18 @@ Compartido
       <li><strong>Fechas:</strong> se guardan como <code>AAAA-MM-DD</code> para que ordenen bien.</li>
       <li><strong>Importes:</strong> números sin símbolo ni texto. Se muestran con separador de miles y hasta dos decimales.</li>
       <li><strong>Totales:</strong> nunca se capturan; se calculan con fórmulas o sumas.</li>
-      <li><strong>Nombres unificados:</strong> un mismo producto, taller o vehículo se escribe siempre igual. El texto original de la nota se conserva en "Detalle original".</li>
+      <li><strong>Nombres unificados:</strong> un mismo producto, cliente o proveedor se escribe siempre igual. Si el texto original importa, se conserva en una columna aparte.</li>
       <li><strong>Campos sin dato:</strong> se dejan en blanco; no se rellenan con supuestos.</li>
       <li><strong>Orden:</strong> hasta dos niveles. Tocar un encabezado lo vuelve el orden principal y el anterior queda como desempate. Cada tabla recuerda su orden.</li>
-      <li><strong>Folios:</strong> los servicios usan <code>SERVICIO-###</code> en consecutivo.</li>
+      <li><strong>Vistas guardadas:</strong> una búsqueda, un filtro y un orden con nombre, propios de cada tabla. Se abren con un toque y viajan en el respaldo.</li>
+      <li><strong>Folios:</strong> un prefijo y un consecutivo, por ejemplo <code>V-001</code>.</li>
     </ul>
     <h3>Entrada y salida</h3>
     <ul>
-      <li><strong>CSV</strong> para importar y exportar tablas. La primera fila lleva los nombres de columna.</li>
-      <li><strong>Nota de servicio:</strong> el PDF del proveedor se pasa a Claude dentro del proyecto, que devuelve un bloque para pegar en "Importar nota". El formato está en el documento <code>formato-nota-servicio</code> del proyecto.</li>
+      <li><strong>CSV</strong> para importar y exportar tablas. La primera fila lleva los nombres de columna. Al importar, los importes como $1,250.50 y las fechas día/mes/año se convierten solos; los códigos que empiezan con cero se quedan como texto.</li>
+      <li><strong>Nota de servicio:</strong> el PDF de la nota se pasa a Claude, que devuelve un bloque para pegar en "Importar nota".</li>
+      <li><strong>Generar mes:</strong> crea las filas de un periodo a partir de una lista de conceptos y su recurrencia.</li>
+      <li>Estas dos funciones aparecen solas en cualquier libro que tenga las tablas y columnas que necesitan; los nombres están en el README.</li>
     </ul>
   </section>
 
@@ -172,7 +171,7 @@ Compartido
     <div class="wrap"><table>
       <thead><tr><th>Uso</th><th>Fuente</th><th>Muestra</th></tr></thead>
       <tbody>
-        <tr><td>Texto e interfaz</td><td>IBM Plex Sans</td><td class="tipo">Servicios de vehículos</td></tr>
+        <tr><td>Texto e interfaz</td><td>IBM Plex Sans</td><td class="tipo">Ventas del mes</td></tr>
         <tr><td>Números e importes</td><td>IBM Plex Mono, cifras de ancho fijo, alineadas a la derecha</td><td class="spec">15,670.00</td></tr>
       </tbody>
     </table></div>
@@ -205,16 +204,18 @@ Compartido
     <div class="wrap"><table>
       <thead><tr><th>Zona</th><th>Contenido</th></tr></thead>
       <tbody>
-        <tr><td>Barra izquierda (☰)</td><td>Reportes guardados, secciones, salas y libros. El libro abierto se marca con fondo negro.</td></tr>
+        <tr><td>Inicio</td><td>Lo primero que se ve: abrir el último libro, lista de libros, reportes recientes, respaldo y documentos.</td></tr>
+        <tr><td>Barra izquierda (☰)</td><td>Inicio, reportes guardados, secciones, salas y libros. La página abierta se marca con fondo negro.</td></tr>
         <tr><td>Encabezado</td><td>Nombre del libro, deshacer, rehacer, generar reporte y Opciones.</td></tr>
         <tr><td>Pestañas</td><td>Las tablas del libro.</td></tr>
+        <tr><td>Vistas</td><td>Todas las filas, las vistas guardadas de la tabla y Guardar vista. La vista en pantalla se marca con fondo negro y una palomita.</td></tr>
         <tr><td>Herramientas</td><td>Buscar, filtrar, fila, columna, importar y exportar.</td></tr>
         <tr><td>Barra derecha (Opciones)</td><td>Tamaño, formato, impresión, apariencia y libro.</td></tr>
       </tbody>
     </table></div>
     <ul>
       <li><strong>Botones:</strong> dicen lo que hacen con un verbo: Guardar, Importar, Eliminar.</li>
-      <li><strong>Eliminar:</strong> filas y formato se deshacen con ↶. Columnas, tablas, libros y salas piden un segundo toque. Una sala solo se elimina vacía.</li>
+      <li><strong>Eliminar:</strong> filas, formato y vistas se deshacen con ↶. Columnas, tablas, libros y salas piden un segundo toque. Una sala solo se elimina vacía.</li>
       <li><strong>Salas y libros:</strong> el botón ⋯ de cada uno permite renombrar, mover, ordenar, crear dentro y eliminar.</li>
       <li><strong>Errores:</strong> dicen qué pasó y cómo arreglarlo, sin culpas ni códigos.</li>
       <li><strong>Celdas calculadas:</strong> fondo gris tenue, para distinguirlas de las que se editan.</li>
@@ -257,7 +258,8 @@ Compartido
     <h2>Estado y límites</h2>
     <div class="nota">
       <ul>
-        <li>Los datos se guardan solo en el navegador donde se abre la web.</li>
+        <li>Los datos se guardan solo en el navegador donde se abre la web. Si el navegador no deja guardar, la web lo avisa.</li>
+        <li>La web está publicada con GitHub Pages; desde ahí se imprime y se descarga.</li>
         <li>Dentro de Claude no se puede imprimir: hoy hay vista previa de impresión. Descargar archivos (CSV y respaldo) ya funciona.</li>
         <li>El respaldo completo se crea y se restaura desde Opciones.</li>
         <li>El motor actual es JavaScript propio; alcanza para miles de filas.</li>
@@ -265,9 +267,8 @@ Compartido
     </div>
     <h3>Pendiente</h3>
     <ul>
-      <li>Información adicional de vehículos y datos de contacto de talleres.</li>
-      <li>Totales al pie de tabla y vistas guardadas.</li>
-      <li>Publicar en sitio propio para activar impresión, descargas y SQLite.</li>
+      <li>Totales al pie de tabla.</li>
+      <li>Guardado con más espacio que el actual.</li>
       <li>Reportes: impresión real y formato de diapositivas.</li>
       <li>Conectar la IA.</li>
     </ul>

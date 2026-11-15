@@ -14,7 +14,7 @@ Al abrir la web se muestra la página de inicio (libros, reportes guardados y re
 
 ## Regla más importante: ningún dato real en el código
 - El repositorio es público. Nunca agregues datos del usuario (pagos, servicios, nombres de personas, empresas, sucursales, proveedores, libros personales) a `index.html` ni a ningún archivo.
-- Los únicos datos permitidos en el código son las tres tablas de ejemplo: Ventas, Clientes y Productos.
+- Los únicos datos permitidos en el código son las tres tablas de ejemplo: Ventas, Clientes y Productos. Lo mismo vale para `docs/`: los ejemplos de los lineamientos y del plan son inventados, no la estructura real de ningún libro.
 - Los datos reales viven en el `localStorage` del navegador de cada persona y entran por Opciones › Respaldo › Restaurar.
 - No subas archivos de respaldo (`*.json` con `"app":"bases-unificadas"`).
 - Las pruebas solo usan las tablas de ejemplo o datos inventados.
@@ -22,6 +22,7 @@ Al abrir la web se muestra la página de inicio (libros, reportes guardados y re
 ## Compatibilidad de datos
 - El estado guardado (clave `bases-unificadas-v1`) debe seguir abriendo después de cada cambio. Si cambias la forma de los datos, agrega una migración que convierta el estado anterior; no rompas respaldos existentes.
 - Tipos de columna: text, number, date, select, multi, check, relation, lookup, formula, sum.
+- Cada tabla puede llevar `vistas` (búsqueda, filtro y orden con nombre). Es un campo opcional: una tabla sin él sigue abriendo igual.
 - Todo respaldo pasa por `revisarEstado` antes de restaurarse. Si agregas un campo que se escribe en la página, revísalo ahí y escápalo con `esc` al pintarlo.
 - Si el navegador no deja guardar, se muestra el aviso `avisoGuardado`; no ocultes ese error.
 
