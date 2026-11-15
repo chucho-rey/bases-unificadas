@@ -4,6 +4,7 @@ Web para guardar tablas, relacionarlas entre sí y consultarlas desde un solo lu
 
 ## Qué hace
 
+- Página de inicio con tus libros, los reportes guardados y el estado del respaldo.
 - Libros con tablas editables, organizados en secciones y salas.
 - Relaciones entre tablas, columnas calculadas y sumas de otra tabla.
 - Buscar, filtrar y ordenar en dos niveles.
@@ -19,7 +20,13 @@ Para llevar los datos de un dispositivo a otro: Opciones › Respaldo › Crear 
 
 ## Cómo está hecha
 
-Un solo archivo, `index.html`, sin dependencias ni paso de compilación. Se publica con GitHub Pages desde la rama `main`.
+Tres archivos, sin dependencias ni paso de compilación: `index.html` (estructura), `estilos.css` (estilos y temas) y `app.js` (comportamiento). Se publica con GitHub Pages desde la rama `main`.
+
+Para probarla, con Playwright instalado:
+
+```bash
+node pruebas/flujo.js
+```
 
 ## Documentos
 

@@ -1,17 +1,29 @@
 # Bases unificadas: reglas para trabajar en este repositorio
 
 ## Qué es
-Web de tablas relacionadas, en un solo archivo `index.html` (HTML, CSS y JavaScript juntos, sin dependencias ni compilación). Se publica con GitHub Pages desde `main`. La interfaz y los mensajes están en español.
+Web de tablas relacionadas, sin dependencias ni compilación. Se publica con GitHub Pages desde `main`. La interfaz y los mensajes están en español.
+
+Archivos:
+- `index.html`: la estructura de la página (inicio, libro y diálogos).
+- `estilos.css`: todos los estilos y los temas.
+- `app.js`: todo el comportamiento.
+- `pruebas/flujo.js`: prueba automática de los flujos principales.
+- `docs/`: lineamientos y plan.
+
+Al abrir la web se muestra la página de inicio (libros, reportes guardados y respaldo); desde ahí se entra al libro. Las dos vistas viven en `index.html` y la función `mostrar` cambia entre ellas.
 
 ## Regla más importante: ningún dato real en el código
 - El repositorio es público. Nunca agregues datos del usuario (pagos, servicios, nombres de personas, empresas, sucursales, proveedores, libros personales) a `index.html` ni a ningún archivo.
 - Los únicos datos permitidos en el código son las tres tablas de ejemplo: Ventas, Clientes y Productos.
 - Los datos reales viven en el `localStorage` del navegador de cada persona y entran por Opciones › Respaldo › Restaurar.
 - No subas archivos de respaldo (`*.json` con `"app":"bases-unificadas"`).
+- Las pruebas solo usan las tablas de ejemplo o datos inventados.
 
 ## Compatibilidad de datos
 - El estado guardado (clave `bases-unificadas-v1`) debe seguir abriendo después de cada cambio. Si cambias la forma de los datos, agrega una migración que convierta el estado anterior; no rompas respaldos existentes.
 - Tipos de columna: text, number, date, select, multi, check, relation, lookup, formula, sum.
+- Todo respaldo pasa por `revisarEstado` antes de restaurarse. Si agregas un campo que se escribe en la página, revísalo ahí y escápalo con `esc` al pintarlo.
+- Si el navegador no deja guardar, se muestra el aviso `avisoGuardado`; no ocultes ese error.
 
 ## Diseño y accesibilidad
 - Blanco y negro. Solo tres colores con significado: azul para positivos, rojo para negativos, amarillo para resaltado. Los reportes son la excepción y tienen paletas propias.
@@ -24,9 +36,9 @@ Web de tablas relacionadas, en un solo archivo `index.html` (HTML, CSS y JavaScr
 - Borrados: filas y formato se deshacen; columnas, tablas, libros y salas piden un segundo toque.
 
 ## Dentro y fuera de Claude
-El mismo código corre como página independiente y como artefacto dentro de Claude. La constante `NATIVO` distingue los dos casos: fuera de Claude se usan la descarga y la impresión del navegador; dentro, la capacidad `downloads` y solo vista previa de impresión.
+El mismo código corre como página independiente y como artefacto dentro de Claude. La constante `NATIVO` distingue los dos casos: fuera de Claude se usan la descarga y la impresión del navegador; dentro, la capacidad `downloads` y solo vista previa de impresión. Para publicarlo como artefacto, `estilos.css` y `app.js` se suben junto con `index.html` como archivos de apoyo.
 
 ## Antes de subir un cambio
-- Comprueba la sintaxis del script y prueba el flujo que tocaste.
+- Comprueba la sintaxis (`node --check app.js`) y corre `node pruebas/flujo.js`; agrega ahí una comprobación del flujo que tocaste.
 - Revisa que no haya entrado ningún dato real.
 - Describe el cambio en español en el mensaje del commit.
