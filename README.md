@@ -20,3 +20,10 @@ Para llevar los datos de un dispositivo a otro: Opciones › Respaldo › Crear 
 ## Cómo está hecha
 
 Un solo archivo, `index.html`, sin dependencias ni paso de compilación. Se publica con GitHub Pages desde la rama `main`.
+
+## Documentos
+
+- [Lineamientos](docs/lineamientos.html): reglas de diseño, accesibilidad e información.
+- [Plan](docs/plan.html): fases, siguiente paso e ideas.
+
+Con GitHub Pages activo se leen en `/docs/lineamientos.html` y `/docs/plan.html` del sitio.

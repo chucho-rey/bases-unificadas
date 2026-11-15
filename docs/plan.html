@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Plan de Bases unificadas</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* Layout: una columna de lectura; primero el siguiente paso, luego las fases en orden con su estado, y al final las ideas sin fecha. */
+:root{--bg:#ffffff;--fg:#111111;--muted:#666666;--line:#d9d9d9;--surface:#f4f4f4;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0e0e0e;--fg:#ededed;--muted:#9c9c9c;--line:#2e2e2e;--surface:#1a1a1a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e0e0e;--fg:#ededed;--muted:#9c9c9c;--line:#2e2e2e;--surface:#1a1a1a;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.55;
+  padding-block:24px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:40rem;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1{font-size:26px;font-weight:600;letter-spacing:-.015em;margin:0;text-wrap:balance}
+h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 12px}
+h3{font-size:17px;font-weight:600;margin:0;text-wrap:balance}
+p{margin:0}
+.fecha{font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:6px}
+.sig{border:2px solid var(--fg);border-radius:6px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.sig h3{font-size:20px}
+ul{margin:0;padding-left:1.15em;display:flex;flex-direction:column;gap:6px}
+.fases{display:flex;flex-direction:column}
+.fase{display:grid;grid-template-columns:2.2rem 1fr;gap:4px 10px;padding:18px 0;border-top:1px solid var(--line)}
+.fase:last-child{border-bottom:1px solid var(--line)}
+.n{font-family:var(--mono);font-size:15px;color:var(--muted);padding-top:2px}
+.cab{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:8px}
+.pill{font-family:var(--mono);font-size:11.5px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.pill.now{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.pill.ok{border-color:var(--fg);color:var(--fg)}
+.fase p{color:var(--muted);font-size:14.5px;margin-top:8px}
+.fase ul,.idea ul{font-size:15px}
+.ideas{display:flex;flex-direction:column;gap:18px}
+.idea h3{font-size:15px;margin-bottom:8px}
+.nota{background:var(--surface);border-radius:6px;padding:16px;font-size:15px;display:flex;flex-direction:column;gap:8px}
+ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
+</style>
+</head>
+<body>
+
+<main>
+  <header>
+    <h1>Plan de Bases unificadas</h1>
+    <p class="fecha">Actualizado el 15 de noviembre de 2026</p>
+  </header>
+
+  <section class="sig" aria-labelledby="sig">
+    <h2 id="sig" style="margin:0">Siguiente paso</h2>
+    <h3>Publicar la web en un sitio propio</h3>
+    <p>Es lo que más cosas destraba: imprimir, tener un enlace fijo para celular y computadora, y un guardado más sólido. El respaldo completo ya existe, así que la mudanza se puede hacer sin perder datos.</p>
+    <ul>
+      <li>Antes de empezar: crea un respaldo desde Opciones y guárdalo fuera del navegador.</li>
+      <li>Elegir dónde se hospeda (por ejemplo GitHub Pages).</li>
+      <li>Restaurar el respaldo en el sitio nuevo.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="hecho">
+    <h2 id="hecho">Ya funciona</h2>
+    <ul>
+      <li>Tablas editables con buscar, filtrar y ordenar en dos niveles.</li>
+      <li>Relaciones, referencias, fórmulas y sumas entre tablas.</li>
+      <li>Columnas de selección, selección múltiple y casilla.</li>
+      <li>Libros, secciones y salas en la barra lateral, ahora editables.</li>
+      <li>Datos reales cargados en tres libros.</li>
+      <li>Pagos por periodo con botón para generar el mes.</li>
+      <li>Importar notas de servicio desglosadas por Claude.</li>
+      <li>Reportes con paletas, guardado e información de cada uno.</li>
+      <li>Respaldo completo: descargar y restaurar todo en un archivo.</li>
+      <li>Descarga directa de CSV y de respaldos.</li>
+      <li>Deshacer y rehacer; temas, alto contraste, tamaño de letra y formato.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="fases">
+    <h2 id="fases">Fases</h2>
+    <div class="fases">
+      <div class="fase"><span class="n">1</span><div>
+        <div class="cab"><h3>Datos reales</h3><span class="pill ok">Hecho</span></div>
+        <ul><li>Tres libros cargados y relacionados.</li><li>Falta: enlazar automáticamente al importar un CSV.</li></ul>
+      </div></div>
+
+      <div class="fase"><span class="n">2</span><div>
+        <div class="cab"><h3>Barra lateral y formato</h3><span class="pill ok">Hecho</span></div>
+        <ul><li>Tamaño, negritas, resaltado y vista de impresión.</li><li>Falta: color de resaltado y ocultar columnas.</li></ul>
+      </div></div>
+
+      <div class="fase"><span class="n">3</span><div>
+        <div class="cab"><h3>Respaldo y salas editables</h3><span class="pill ok">Hecho</span></div>
+        <ul><li>Respaldo completo en un archivo, con restauración.</li><li>Crear, renombrar, mover, ordenar y eliminar salas y libros.</li></ul>
+      </div></div>
+
+      <div class="fase"><span class="n">4</span><div>
+        <div class="cab"><h3>Publicar en sitio propio</h3><span class="pill now">Siguiente</span></div>
+        <ul>
+          <li>Hospedaje estático gratuito.</li>
+          <li>Activar el botón Imprimir.</li>
+          <li>Motor SQLite en el navegador para consultas más rápidas.</li>
+          <li>Guardado más robusto que el actual.</li>
+        </ul>
+      </div></div>
+
+      <div class="fase"><span class="n">5</span><div>
+        <div class="cab"><h3>Reportes completos</h3><span class="pill">Después</span></div>
+        <ul>
+          <li>Impresión real con encabezado, totales y saltos de página.</li>
+          <li>Formato diapositivas para exponer.</li>
+          <li>Dos desgloses por reporte, por ejemplo sucursal y estatus.</li>
+          <li>Plantillas: guardar la configuración y regenerar el reporte cada mes.</li>
+          <li>Comparar dos reportes guardados.</li>
+        </ul>
+      </div></div>
+
+      <div class="fase"><span class="n">6</span><div>
+        <div class="cab"><h3>Conectar la IA</h3><span class="pill">Al final</span></div>
+        <ul>
+          <li>Preguntas sobre los datos en lenguaje normal.</li>
+          <li>Propuestas de proyectos y resúmenes a partir de las tablas.</li>
+          <li>Redacción del texto de los reportes.</li>
+        </ul>
+      </div></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="ideas">
+    <h2 id="ideas">Ideas sin fecha</h2>
+    <div class="ideas">
+      <div class="idea"><h3>Tablas</h3><ul>
+        <li><strong>Vistas guardadas:</strong> "Por pagar", "Tarjetas", "Solo leídos", con su filtro y orden. Es la más útil de la lista.</li>
+        <li><strong>Totales al pie:</strong> suma, promedio y conteo por columna, respetando el filtro.</li>
+        <li><strong>Agrupar filas:</strong> plegadas por un campo, con subtotal por grupo.</li>
+        <li><strong>Tablero y calendario:</strong> filas en columnas por estatus o por fecha.</li>
+        <li><strong>Ocultar y reordenar columnas.</strong></li>
+        <li><strong>Formato condicional:</strong> resaltar solo lo vencido o lo pendiente.</li>
+      </ul></div>
+      <div class="idea"><h3>Egresos</h3><ul>
+        <li><strong>Avisos de vencimiento:</strong> lista de "vence esta semana" al abrir el libro.</li>
+        <li><strong>Comparar meses:</strong> cuánto cambió cada concepto contra el mes anterior.</li>
+        <li><strong>Presupuesto por concepto:</strong> monto esperado y diferencia contra lo pagado.</li>
+      </ul></div>
+      <div class="idea"><h3>Vehículos</h3><ul>
+        <li><strong>Ficha por vehículo:</strong> servicios, gasto total y último mantenimiento en una pantalla.</li>
+        <li><strong>Próximo servicio:</strong> aviso según el kilometraje.</li>
+        <li><strong>Costo por kilómetro</strong> y comparación entre vehículos.</li>
+        <li>Información adicional de vehículos y contacto de talleres.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="dec">
+    <h2 id="dec">Decisiones pendientes</h2>
+    <ol>
+      <li>¿Dónde se hospedará la web?</li>
+      <li>Reporte en diapositivas: ¿se expone desde la web o necesitas un archivo de PowerPoint?</li>
+      <li>Impresión: ¿carta vertical, horizontal o ambas?</li>
+      <li>¿Compartido debe compartirse de verdad con otras personas, o basta como sección?</li>
+    </ol>
+  </section>
+
+  <section class="nota" aria-label="Límites actuales">
+    <p><strong>Límites actuales</strong></p>
+    <p>Los datos viven solo en el navegador donde abres la web, por eso el respaldo es importante. Dentro de Claude todavía no se puede imprimir; se resuelve en la fase 4.</p>
+  </section>
+</main>
+
+</body>
+</html>
