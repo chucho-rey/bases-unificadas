@@ -147,6 +147,42 @@ function comprobar(nombre, ok, detalle) {
     await p.click("#dlgColMenu [data-close]");
   }
 
+  console.log("Reportes completos");
+  await p.evaluate(() => (window.print = () => (window.__impreso = (window.__impreso || 0) + 1)));
+  await p.click("#btnRep");
+  await p.selectOption("#repG", "v_cli");
+  await p.selectOption("#repG2", "v_ciu");
+  comprobar("dos desgloses en el título de la sección", (await p.locator("#repHoja h3").first().textContent()) === "Por Cliente y Ciudad");
+  comprobar("cada grupo lleva su segundo desglose", (await p.locator("#repHoja .rp-grp").count()) === 4 && (await p.locator("#repHoja .rp-grp span.sub:not(.n)").count()) === 4);
+  comprobar("el detalle termina con el total", (await p.locator("#repHoja tfoot").textContent()) === "Suma53", await p.locator("#repHoja tfoot").textContent());
+  comprobar("el reporte no ensancha la página", (await ancho()) <= 0, await ancho());
+  comprobar("botones de 40 px o más", (await chicos()).length === 0, await chicos());
+  await p.fill("#repTitulo", "Ventas por cliente");
+  await p.click("#repPlGuardar");
+  comprobar("guarda la plantilla", (await p.locator("#repPlMsg").textContent()).includes("Plantilla guardada: Ventas por cliente"));
+  await p.click("#dlgRep [data-close]");
+  await p.click("#btnRep");
+  comprobar("un reporte nuevo empieza sin segundo desglose", (await p.inputValue("#repG2")) === "");
+  await p.selectOption("#repPl", { label: "Ventas por cliente" });
+  comprobar("la plantilla arma el reporte igual", (await p.inputValue("#repG")) === "v_cli" && (await p.inputValue("#repG2")) === "v_ciu" && (await p.inputValue("#repTitulo")) === "Ventas por cliente");
+  await p.click("#repPlBorrar");
+  comprobar("eliminar la plantilla avisa encima del reporte", await p.locator("#dlgRep #toast").isVisible());
+  await p.click("#toastBtn");
+  comprobar("y se deshace", (await p.locator("#repPl option").count()) === 2);
+  await p.check('#dlgRep input[name="hojaRep"][value="h"]');
+  await p.click("#repImprimir");
+  const hoja = await p.evaluate(() => ({ css: document.getElementById("hojaCss").textContent, corre: document.querySelectorAll("#printArea .rp-corre").length, veces: window.__impreso }));
+  comprobar("imprime en carta horizontal con número de página", /size:letter landscape/.test(hoja.css) && /counter\(page\)/.test(hoja.css) && hoja.veces === 1, hoja);
+  comprobar("la hoja lleva el título que se repite", hoja.corre === 1);
+  await p.evaluate(() => window.dispatchEvent(new Event("afterprint")));
+  await p.check('#dlgRep input[name="hojaRep"][value="v"]');
+  await p.click("#repImprimir");
+  comprobar("y en carta vertical", /size:letter portrait/.test(await p.evaluate(() => document.getElementById("hojaCss").textContent)));
+  await p.evaluate(() => window.dispatchEvent(new Event("afterprint")));
+  await p.click("#repGuardar");
+  comprobar("guardar el reporte avisa encima del reporte", await p.locator("#dlgRep #toast").isVisible());
+  await p.click("#dlgRep [data-close]");
+
   console.log("Fórmulas");
   await p.click('#grid [data-col="v_tot"]');
   await p.click("#cmEditar");

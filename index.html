@@ -268,6 +268,13 @@
   <div class="prbar">
     <label class="chk"><input type="checkbox" id="prHl"> Resaltados</label>
     <label class="chk"><input type="checkbox" id="prBd"> Negritas</label>
+    <div class="hoja" data-nativo hidden>
+      <span id="hojaTabT" class="sr">Hoja para imprimir</span>
+      <div class="seg" role="radiogroup" aria-labelledby="hojaTabT">
+        <label><input type="radio" name="hojaTab" value="v"><span>Carta vertical</span></label>
+        <label><input type="radio" name="hojaTab" value="h"><span>Carta horizontal</span></label>
+      </div>
+    </div>
     <span style="margin-left:auto;display:flex;gap:8px"><button class="btn sm pri" id="prImprimir" type="button" data-nativo hidden>Imprimir</button><button class="btn sm" type="button" data-close>Cerrar</button></span>
   </div>
   <div id="prHoja">
@@ -306,10 +313,25 @@
       <label>Título<input class="field" id="repTitulo" type="text" autocomplete="off"></label>
       <div class="filtro">
         <label>Agrupar por<select class="field" id="repG"></select></label>
-        <label>Sumar<select class="field" id="repS"></select></label>
+        <label>Y después por<select class="field" id="repG2"></select></label>
+        <label style="grid-column:1/-1">Sumar<select class="field" id="repS"></select></label>
       </div>
       <label class="chk" style="flex-direction:row;font-weight:400;font-size:15px"><input type="checkbox" id="repDet"> Incluir el detalle de filas</label>
       <p class="ayuda">El reporte toma la tabla en pantalla, con su filtro y orden actuales.</p>
+      <section class="sec">
+        <h3>Plantilla</h3>
+        <label>Usar una plantilla de esta tabla<select class="field" id="repPl"></select></label>
+        <div class="acciones"><button class="btn sm" id="repPlGuardar" type="button">Guardar como plantilla</button><button class="btn sm" id="repPlBorrar" type="button" hidden>Eliminar plantilla</button></div>
+        <p class="ayuda">Una plantilla recuerda los desgloses, la suma, el detalle, la paleta y la hoja. Para el reporte de cada mes: filtra la tabla, abre el reporte y elige la plantilla.</p>
+        <p class="ayuda" id="repPlMsg" role="status"></p>
+      </section>
+    </div>
+    <div class="hoja" data-nativo hidden>
+      <span id="hojaRepT">Hoja para imprimir</span>
+      <div class="seg" role="radiogroup" aria-labelledby="hojaRepT">
+        <label><input type="radio" name="hojaRep" value="v"><span>Carta vertical</span></label>
+        <label><input type="radio" name="hojaRep" value="h"><span>Carta horizontal</span></label>
+      </div>
     </div>
     <div class="pal" id="repPal" role="group" aria-label="Paleta de colores"></div>
     <div class="rp" id="repHoja"></div>

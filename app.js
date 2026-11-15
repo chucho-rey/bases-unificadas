@@ -1671,6 +1671,10 @@
     $("toastTxt").textContent = msg;
     undo = fn;
     $("toastBtn").textContent = label || "Deshacer";
+    /* Un diálogo abierto tapa todo lo que está fuera de él: el aviso se muestra dentro del que esté encima. */
+    const abiertos = document.querySelectorAll("dialog[open]"),
+      casa = abiertos.length ? abiertos[abiertos.length - 1] : document.body;
+    if ($("toast").parentElement !== casa) casa.appendChild($("toast"));
     $("toast").hidden = false;
     clearTimeout(toastT);
     toastT = setTimeout(() => {
@@ -1760,6 +1764,7 @@
     $("prBd").checked = p.pBd;
     $("prHoja").classList.toggle("nohl", !p.pHl);
     $("prHoja").classList.toggle("nobd", !p.pBd);
+    syncHoja();
   }
   $("prHl").onchange = $("prBd").onchange = () => {
     state.prefs.pHl = $("prHl").checked;
@@ -1787,7 +1792,7 @@
             const v = shown(t, r, c);
             return (
               '<td class="' +
-              (typeof v === "number" ? "n " + numCls(v) : "") +
+              (typeof v === "number" ? "n " + numCls(v) : String(v).length <= 16 ? "nb" : "") +
               fcls(t, r, c).replace(" sel", "") +
               '">' +
               esc(fmt(v)) +
@@ -2065,6 +2070,16 @@
     const a = $("printArea");
     a.innerHTML = "";
     a.appendChild(el.cloneNode(true));
+    let css = $("hojaCss");
+    if (!css) {
+      css = document.createElement("style");
+      css.id = "hojaCss";
+      document.head.appendChild(css);
+    }
+    css.textContent =
+      "@page{size:letter " +
+      (state.prefs.hoja === "h" ? "landscape" : "portrait") +
+      ';margin:12mm 12mm 14mm;@bottom-right{content:"Página " counter(page) " de " counter(pages);font:9px sans-serif;color:#555}}';
     document.body.classList.add("printing");
     const fin = () => {
       document.body.classList.remove("printing");
@@ -2214,6 +2229,21 @@
         if (t.fmt !== undefined && !(obj(t.fmt) && obj(t.fmt.cells) && obj(t.fmt.rows) && obj(t.fmt.cols)))
           delete t.fmt;
         if (t.view !== undefined && !obj(t.view)) delete t.view;
+        if (t.plantillas !== undefined) {
+          t.plantillas = (Array.isArray(t.plantillas) ? t.plantillas : [])
+            .filter((x) => obj(x) && id(x.id))
+            .map((x) => ({
+              id: x.id,
+              name: txt(x.name, "Plantilla"),
+              g: txt(x.g, ""),
+              g2: txt(x.g2, ""),
+              s: txt(x.s, ""),
+              det: !!x.det,
+              pal: txt(x.pal, "tinta"),
+              hoja: x.hoja === "h" ? "h" : "v",
+            }));
+          if (!t.plantillas.length) delete t.plantillas;
+        }
         if (t.vistas !== undefined) {
           const ord = (x) =>
             obj(x) && x.col ? { col: txt(x.col, ""), dir: x.dir === -1 ? -1 : 1 } : { col: "", dir: 1 };
@@ -2261,7 +2291,18 @@
       if (d.total !== null) d.total = num(d.total);
       d.gName = txt(d.gName, "");
       d.sName = txt(d.sName, "");
-      d.groups = d.groups.filter(obj).map((o) => ({ k: txt(o.k, ""), n: num(o.n), sum: num(o.sum) }));
+      const grupo = (o) => ({ k: txt(o.k, ""), n: num(o.n), sum: num(o.sum) });
+      d.g2Name = txt(d.g2Name, "");
+      d.groups = d.groups.filter(obj).map((o) => {
+        const x = grupo(o);
+        if (Array.isArray(o.sub)) x.sub = o.sub.filter(obj).map(grupo);
+        return x;
+      });
+      if (d.pie !== undefined) {
+        if (Array.isArray(d.pie))
+          d.pie = d.pie.map((o) => (obj(o) ? { l: txt(o.l, ""), v: txt(o.v, "") } : null));
+        else delete d.pie;
+      }
       if (d.head !== undefined) {
         if (!Array.isArray(d.head) || !Array.isArray(d.body) || !d.body.every(Array.isArray)) return false;
         if (!Array.isArray(d.num)) d.num = [];
@@ -2430,9 +2471,10 @@
       .filter(Boolean);
     return { filtro: f.join(" · ") || "Sin filtro", orden: o.join(", ") || "Sin orden" };
   }
-  function datosRep(t, g, s, det) {
+  function datosRep(t, g, s, det, g2) {
     const rows = view(t),
       gc = g && colById(t, g),
+      g2c = gc && g2 && g2 !== g && colById(t, g2),
       sc = s && colById(t, s),
       m = new Map();
     let total = 0;
@@ -2442,23 +2484,40 @@
       total += x;
       if (gc) {
         const k = String(shown(t, r, gc)) || "(sin dato)",
-          o = m.get(k) || { k, n: 0, sum: 0 };
+          o = m.get(k) || { k, n: 0, sum: 0, sub: g2c ? new Map() : null };
         o.n++;
         o.sum += x;
         m.set(k, o);
+        if (g2c) {
+          const k2 = String(shown(t, r, g2c)) || "(sin dato)",
+            o2 = o.sub.get(k2) || { k: k2, n: 0, sum: 0 };
+          o2.n++;
+          o2.sum += x;
+          o.sub.set(k2, o2);
+        }
       }
     });
+    const orden = (a, b) => b.sum - a.sum || b.n - a.n || a.k.localeCompare(b.k, "es"),
+      r2 = (o) => {
+        o.sum = Math.round(o.sum * 100) / 100;
+      };
     const groups = [...m.values()];
     groups.forEach((o) => {
-      o.sum = Math.round(o.sum * 100) / 100;
+      r2(o);
+      if (o.sub) {
+        o.sub = [...o.sub.values()];
+        o.sub.forEach(r2);
+        o.sub.sort(orden);
+      } else delete o.sub;
     });
-    groups.sort((a, b) => b.sum - a.sum || b.n - a.n || a.k.localeCompare(b.k, "es"));
+    groups.sort(orden);
     const MAX = 500,
       d = {
         n: rows.length,
         ncols: t.cols.length,
         total: sc ? Math.round(total * 100) / 100 : null,
         gName: gc ? gc.name : "",
+        g2Name: g2c ? g2c.name : "",
         sName: sc ? sc.name : "",
         groups,
       };
@@ -2467,6 +2526,13 @@
       d.num = t.cols.map(esNum);
       d.body = rows.slice(0, MAX).map((r) => t.cols.map((c) => String(fmt(shown(t, r, c)))));
       d.mas = Math.max(0, rows.length - MAX);
+      /* Totales al final del detalle: el que cada columna tenga elegido al pie de su tabla y, si no
+         eligió ninguno, la suma de la columna que el reporte suma. Usan todas las filas, no solo las 500. */
+      const pie = t.cols.map((c) => {
+        const o = c.pie ? totalDe(t, rows, c) : sc && c.id === sc.id ? { l: "Suma", v: d.total } : null;
+        return o ? { l: o.l, v: o.v === "" ? "sin datos" : String(fmt(o.v)) } : null;
+      });
+      if (pie.some(Boolean)) d.pie = pie;
     }
     return d;
   }
@@ -2510,30 +2576,47 @@
           ": valores distintos</span></div>"
         : "") +
       "</div>";
+    const fila = (o, cls) =>
+      '<span class="' +
+      cls +
+      '">' +
+      esc(o.k) +
+      '</span><span class="n ' +
+      cls +
+      '">' +
+      o.n +
+      (o.n === 1 ? " registro" : " registros") +
+      '</span><span class="n ' +
+      cls +
+      '">' +
+      (d.total !== null ? esc(fmt(o.sum)) : "") +
+      "</span>";
     if (d.gName)
       h +=
         "<div><h3>Por " +
         esc(d.gName) +
+        (d.g2Name ? " y " + esc(d.g2Name) : "") +
         '</h3><div class="rp-g">' +
         d.groups
           .map(
             (o) =>
-              "<span>" +
-              esc(o.k) +
-              '</span><span class="n">' +
-              o.n +
-              (o.n === 1 ? " registro" : " registros") +
-              '</span><span class="n">' +
-              (d.total !== null ? esc(fmt(o.sum)) : "") +
-              '</span><span class="bar"><i style="width:' +
+              '<div class="rp-grp">' +
+              fila(o, "") +
+              '<span class="bar"><i style="width:' +
               Math.round((Math.abs(usaSuma ? o.sum : o.n) / max) * 100) +
-              '%"></i></span>',
+              '%"></i></span>' +
+              (o.sub ? o.sub.map((x) => fila(x, "sub")).join("") : "") +
+              "</div>",
           )
           .join("") +
         "</div></div>";
     if (d.head)
       h +=
-        '<div><h3>Detalle</h3><div class="rp-tw"><table><thead><tr>' +
+        '<div><h3>Detalle</h3><div class="rp-tw"><table><thead><tr class="rp-corre"><th colspan="' +
+        d.head.length +
+        '">' +
+        esc((r.title || "Sin título") + " · " + r.bookName + " › " + r.tableName + " · " + f.fecha) +
+        "</th></tr><tr>" +
         d.head
           .map((x, i) => '<th scope="col"' + (d.num[i] ? ' class="n"' : "") + ">" + esc(x) + "</th>")
           .join("") +
@@ -2542,11 +2625,33 @@
           .map(
             (row) =>
               "<tr>" +
-              row.map((x, i) => "<td" + (d.num[i] ? ' class="n"' : "") + ">" + esc(x) + "</td>").join("") +
+              row
+                .map(
+                  (x, i) =>
+                    "<td" +
+                    (d.num[i] ? ' class="n"' : x.length <= 16 ? ' class="nb"' : "") +
+                    ">" +
+                    esc(x) +
+                    "</td>",
+                )
+                .join("") +
               "</tr>",
           )
           .join("") +
-        "</tbody></table></div>" +
+        "</tbody>" +
+        (d.pie
+          ? "<tfoot><tr>" +
+            d.head
+              .map((x, i) => {
+                const o = d.pie[i];
+                return o
+                  ? '<td class="n"><span class="pie-l">' + esc(o.l) + "</span>" + esc(o.v) + "</td>"
+                  : "<td></td>";
+              })
+              .join("") +
+            "</tr></tfoot>"
+          : "") +
+        "</table></div>" +
         (d.mas
           ? '<p class="rp-foot" style="margin-top:8px">Faltan ' +
             d.mas +
@@ -2584,7 +2689,7 @@
       (d.total !== null ? "total " + esc(fmt(d.total)) : "sin suma") +
       "</span></div>" +
       '<div class="info-row"><span>' +
-      (d.gName ? "Agrupado por " + esc(d.gName) : "Sin agrupar") +
+      (d.gName ? "Agrupado por " + esc(d.gName) + (d.g2Name ? " y " + esc(d.g2Name) : "") : "Sin agrupar") +
       "</span><span>" +
       (d.sName ? "Suma " + esc(d.sName) : "") +
       "</span></div>" +
@@ -2616,7 +2721,8 @@
   function recalcRep() {
     const t = tableById(rep.r.tableId);
     if (!t) return;
-    rep.r.data = datosRep(t, rep.r.g, rep.r.s, rep.r.det);
+    rep.r.data = datosRep(t, rep.r.g, rep.r.s, rep.r.det, rep.r.g2);
+    $("repG2").disabled = !rep.r.g;
     pintarRep();
   }
   $("btnRep").onclick = () => {
@@ -2641,6 +2747,7 @@
         filtro: dv.filtro,
         orden: dv.orden,
         g,
+        g2: "",
         s,
         det: true,
       },
@@ -2648,6 +2755,10 @@
     $("repTitulo").value = rep.r.title;
     $("repG").innerHTML = '<option value="">Sin agrupar</option>' + opts(t.cols);
     $("repG").value = g;
+    $("repG2").innerHTML = '<option value="">Sin segundo desglose</option>' + opts(t.cols);
+    $("repG2").value = "";
+    llenarPl("");
+    syncHoja();
     $("repS").innerHTML = '<option value="">Sin suma</option>' + opts(t.cols.filter(esNum));
     $("repS").value = s;
     $("repDet").checked = true;
@@ -2663,10 +2774,103 @@
     rep.r.g = e.target.value;
     recalcRep();
   };
+  $("repG2").onchange = (e) => {
+    rep.r.g2 = e.target.value;
+    recalcRep();
+  };
   $("repS").onchange = (e) => {
     rep.r.s = e.target.value;
     recalcRep();
   };
+
+  /* ---------- plantillas de reporte ----------
+     Una plantilla guarda cómo se arma un reporte (desgloses, suma, detalle, paleta y hoja), no sus datos.
+     Vive en su tabla (t.plantillas) y se aplica sobre lo que esté en pantalla: cada mes se filtra la tabla,
+     se elige la plantilla y el reporte sale igual que el anterior. */
+  const sufijo = () => (hayFiltro() ? " · " + ui.f.val : "");
+  function llenarPl(id) {
+    const t = tableById(rep.r.tableId),
+      ps = (t && t.plantillas) || [];
+    $("repPl").innerHTML = '<option value="">Sin plantilla</option>' + opts(ps);
+    $("repPl").value = ps.some((x) => x.id === id) ? id : "";
+    $("repPlBorrar").hidden = !$("repPl").value;
+  }
+  $("repPl").onchange = () => {
+    const t = tableById(rep.r.tableId),
+      pl = (t.plantillas || []).find((x) => x.id === $("repPl").value),
+      r = rep.r,
+      col = (id) => (id && colById(t, id) ? id : "");
+    $("repPlBorrar").hidden = !pl;
+    $("repPlMsg").textContent = "";
+    if (!pl) return;
+    r.g = col(pl.g);
+    r.g2 = col(pl.g2);
+    r.s = col(pl.s);
+    r.det = !!pl.det;
+    r.pal = palDe(pl.pal)[0];
+    r.title = pl.name + sufijo();
+    state.prefs.pal = r.pal;
+    state.prefs.hoja = pl.hoja === "h" ? "h" : "v";
+    save();
+    $("repTitulo").value = r.title;
+    $("repG").value = r.g;
+    $("repG2").value = r.g2;
+    $("repS").value = r.s;
+    $("repDet").checked = r.det;
+    syncHoja();
+    recalcRep();
+  };
+  $("repPlGuardar").onclick = () => {
+    const t = tableById(rep.r.tableId),
+      r = rep.r,
+      suf = sufijo();
+    let n = (r.title || "").trim();
+    if (suf && n.endsWith(suf)) n = n.slice(0, -suf.length).trim();
+    if (!n) {
+      $("repPlMsg").textContent = "Escribe un título: será el nombre de la plantilla.";
+      return;
+    }
+    snap();
+    const ps = t.plantillas || (t.plantillas = []),
+      cfg = { g: r.g, g2: r.g2, s: r.s, det: r.det, pal: r.pal, hoja: state.prefs.hoja === "h" ? "h" : "v" };
+    let pl = ps.find((x) => x.name.toLowerCase() === n.toLowerCase());
+    if (pl) Object.assign(pl, cfg);
+    else ps.push((pl = Object.assign({ id: "pl_" + uid(), name: n }, cfg)));
+    save();
+    llenarPl(pl.id);
+    $("repPlMsg").textContent =
+      "Plantilla guardada: " + pl.name + ". La encontrarás aquí cada vez que hagas un reporte de esta tabla.";
+  };
+  $("repPlBorrar").onclick = () => {
+    const t = tableById(rep.r.tableId),
+      id = $("repPl").value;
+    if (!id) return;
+    snap();
+    t.plantillas = t.plantillas.filter((x) => x.id !== id);
+    if (!t.plantillas.length) delete t.plantillas;
+    save();
+    llenarPl("");
+    $("repPlMsg").textContent = "";
+    toast("Plantilla eliminada", () => {
+      undoApp();
+      llenarPl(id);
+    });
+  };
+
+  /* ---------- hoja de impresión ----------
+     Carta vertical u horizontal. Es una preferencia de quien imprime, no del reporte guardado. */
+  function syncHoja() {
+    const h = state.prefs.hoja === "h" ? "h" : "v";
+    document.querySelectorAll("input[name=hojaRep], input[name=hojaTab]").forEach((x) => {
+      x.checked = x.value === h;
+    });
+  }
+  document.addEventListener("change", (e) => {
+    if (e.target.name !== "hojaRep" && e.target.name !== "hojaTab") return;
+    state.prefs.hoja = e.target.value;
+    save();
+    syncHoja();
+  });
   $("repDet").onchange = (e) => {
     rep.r.det = e.target.checked;
     recalcRep();
@@ -2740,6 +2944,7 @@
     rep = { saved: true, info: true, r };
     disarm($("repBorrar"), "Eliminar reporte");
     $("dlgReps").close();
+    syncHoja();
     pintarRep();
     $("dlgRep").showModal();
   });
@@ -3361,6 +3566,7 @@
     if (!r) return;
     rep = { saved: true, info: true, r };
     disarm($("repBorrar"), "Eliminar reporte");
+    syncHoja();
     pintarRep();
     $("dlgRep").showModal();
   });
