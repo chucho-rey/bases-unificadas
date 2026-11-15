@@ -165,6 +165,32 @@
   </form>
 </dialog>
 
+<dialog id="dlgColMenu" aria-labelledby="cmT">
+  <div class="form">
+    <h2 id="cmT"></h2>
+    <p class="ayuda">Toda la columna está seleccionada: lo que elijas aquí se aplica a todas sus celdas.</p>
+    <section class="sec">
+      <h3>Formato</h3>
+      <div class="acciones">
+        <button class="btn" id="cmB" type="button" data-cm="b" aria-pressed="false">Negritas</button>
+        <button class="btn" id="cmH" type="button" data-cm="h" aria-pressed="false">Resaltar</button>
+        <button class="btn" id="cmClear" type="button" data-cm="clear">Quitar formato</button>
+      </div>
+    </section>
+    <section class="sec">
+      <h3>Total al pie</h3>
+      <div class="seg" role="radiogroup" aria-label="Total al pie de la columna">
+        <label><input type="radio" name="cmPie" value=""><span>Ninguno</span></label>
+        <label><input type="radio" name="cmPie" value="sum"><span>Suma</span></label>
+        <label><input type="radio" name="cmPie" value="avg"><span>Promedio</span></label>
+        <label><input type="radio" name="cmPie" value="count"><span>Conteo</span></label>
+      </div>
+      <p class="ayuda" id="cmPieAyuda"></p>
+    </section>
+    <div class="fila"><button class="btn izq" id="cmEditar" type="button">Editar columna</button><button class="btn pri" type="button" data-close>Listo</button></div>
+  </div>
+</dialog>
+
 <dialog id="dlgVista" aria-labelledby="visT">
   <form class="form" id="formVista">
     <h2 id="visT">Guardar vista</h2>

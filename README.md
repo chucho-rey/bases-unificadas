@@ -7,6 +7,7 @@ Web para guardar tablas, relacionarlas entre sí y consultarlas desde un solo lu
 - Página de inicio con tus libros, los reportes guardados y el estado del respaldo.
 - Libros con tablas editables, organizados en secciones y salas.
 - Relaciones entre tablas, columnas calculadas y sumas de otra tabla.
+- Menú por columna para dar negritas o resaltado a la columna completa y mostrar su total al pie (suma, promedio o conteo).
 - Buscar, filtrar y ordenar en dos niveles, y guardar esa combinación como una vista con nombre.
 - Reportes con paletas de color, que se pueden guardar e imprimir.
 - Respaldo completo en un archivo, con restauración.

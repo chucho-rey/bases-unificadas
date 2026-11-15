@@ -632,7 +632,9 @@
             s2 = !s && ui.sort2.col === c.id,
             sd = s ? ui.sort.dir : ui.sort2.dir;
           return (
-            '<th scope="col" aria-sort="' +
+            '<th scope="col" data-h="' +
+            c.id +
+            '" aria-sort="' +
             (s ? (ui.sort.dir > 0 ? "ascending" : "descending") : "none") +
             '"><div class="thbox"><button type="button" class="th" data-sort="' +
             c.id +
@@ -642,9 +644,9 @@
             (s || s2 ? (sd > 0 ? "↑" : "↓") + (s2 ? "2" : ui.sort2.col ? "1" : "") : "") +
             '</span></button><button type="button" class="cfg" data-col="' +
             c.id +
-            '" aria-label="Editar columna ' +
+            '" aria-haspopup="dialog" aria-label="Opciones de la columna ' +
             esc(c.name) +
-            '">⋯</button></div><span class="tipo">' +
+            ': formato, total y edición">⋯</button></div><span class="tipo">' +
             esc(tipoTxt(t, c)) +
             "</span></th>"
           );
@@ -659,7 +661,8 @@
         '" style="color:var(--muted)">' +
         (t.rows.length ? "Ninguna fila coincide." : "Sin filas. Toca “+ Fila”.") +
         "</td></tr>";
-    $("grid").innerHTML = h + "</tbody>";
+    $("grid").innerHTML = h + "</tbody><tfoot>" + pieFila(t, rows) + "</tfoot>";
+    if (colMenu) marcaCol();
     $("conteo").textContent =
       (rows.length === t.rows.length ? t.rows.length : rows.length + " de " + t.rows.length) +
       (t.rows.length === 1 ? " fila" : " filas");
@@ -682,6 +685,144 @@
     $("fOp").value = "has";
     render();
   }
+
+  /* ---------- totales al pie ----------
+     Cada columna puede mostrar un total (c.pie: "sum", "avg" o "count") al pie de la tabla. Se calcula
+     con todas las filas que pasan la búsqueda y el filtro, no solo con las que están pintadas. */
+  const SUMABLE = ["number", "formula", "sum", "lookup"];
+  function totalDe(t, rows, c) {
+    let conDato = 0,
+      nums = 0,
+      suma = 0;
+    rows.forEach((r) => {
+      if (c.type === "check") {
+        if (r.c[c.id]) conDato++;
+        return;
+      }
+      const v = shown(t, r, c);
+      if (v !== "" && v != null) conDato++;
+      if (typeof v === "number") {
+        nums++;
+        suma += v;
+      }
+    });
+    if (c.pie === "count") return { l: c.type === "check" ? "Marcadas" : "Conteo", v: conDato };
+    const r2 = (x) => Math.round(x * 100) / 100;
+    if (c.pie === "sum") return { l: "Suma", v: r2(suma) };
+    return { l: "Promedio", v: nums ? r2(suma / nums) : "" };
+  }
+  /* La fila del pie, o nada si ninguna columna tiene total. En impresión no lleva la columna de acciones. */
+  function pieFila(t, rows, impresion) {
+    if (!t.cols.some((c) => c.pie)) return "";
+    return (
+      "<tr>" +
+      t.cols
+        .map((c) => {
+          if (!c.pie) return '<td class="pie-c"></td>';
+          const o = totalDe(t, rows, c);
+          return (
+            '<td class="pie-c n ' +
+            (c.pie === "count" ? "" : numCls(o.v)) +
+            '"><span class="pie-l">' +
+            o.l +
+            "</span>" +
+            esc(o.v === "" ? "sin datos" : fmt(o.v)) +
+            "</td>"
+          );
+        })
+        .join("") +
+      (impresion ? "" : '<td class="pie-c"></td>') +
+      "</tr>"
+    );
+  }
+  function pintarPie(t) {
+    const tf = $("grid").querySelector("tfoot");
+    if (tf && t.cols.some((c) => c.pie)) tf.innerHTML = pieFila(t, view(t));
+  }
+
+  /* ---------- menú de columna ----------
+     El botón ⋯ de cada encabezado selecciona toda la columna y abre su menú: formato, total al pie y
+     edición. El tamaño de letra no está aquí a propósito: solo se cambia para la tabla completa. */
+  let colMenu = null;
+  function marcaCol() {
+    $("grid")
+      .querySelectorAll('[data-h="' + colMenu + '"], td[data-c="' + colMenu + '"]')
+      .forEach((x) => x.classList.add("colsel"));
+  }
+  function pintarColMenu() {
+    const t = cur(),
+      c = colById(t, colMenu),
+      f = (t.fmt && t.fmt.cols[c.id]) || {},
+      pon = (id, txt, on) => {
+        $(id).setAttribute("aria-pressed", String(!!on));
+        $(id).textContent = (on ? "✓ " : "") + txt;
+      };
+    $("cmT").textContent = "Columna " + c.name;
+    pon("cmB", "Negritas", f.b);
+    pon("cmH", "Resaltar", f.h);
+    const hayFmt = !!(
+      t.fmt &&
+      (t.fmt.cols[c.id] || Object.keys(t.fmt.cells).some((k) => k.endsWith("|" + c.id)))
+    );
+    $("cmClear").disabled = !hayFmt;
+    const sumable = SUMABLE.includes(c.type);
+    document.querySelectorAll("input[name=cmPie]").forEach((r) => {
+      r.checked = r.value === (c.pie || "");
+      r.parentElement.hidden = !sumable && (r.value === "sum" || r.value === "avg");
+    });
+    $("cmPieAyuda").textContent = sumable
+      ? "El total usa las filas que están en pantalla: respeta la búsqueda, el filtro y la vista."
+      : c.type === "check"
+        ? "Esta columna es una casilla: el conteo dice cuántas están marcadas."
+        : "Esta columna no es numérica: solo se puede contar cuántas filas tienen dato.";
+  }
+  function abrirColMenu(id) {
+    colMenu = id;
+    marcaCol();
+    pintarColMenu();
+    $("dlgColMenu").showModal();
+  }
+  $("dlgColMenu").addEventListener("close", () => {
+    colMenu = null;
+    $("grid")
+      .querySelectorAll(".colsel")
+      .forEach((x) => x.classList.remove("colsel"));
+  });
+  $("dlgColMenu").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-cm]"),
+      t = cur();
+    if (!b || !colMenu) return;
+    const k = b.dataset.cm;
+    snap();
+    if (k === "clear") {
+      delete t.fmt.cols[colMenu];
+      Object.keys(t.fmt.cells).forEach((x) => {
+        if (x.endsWith("|" + colMenu)) delete t.fmt.cells[x];
+      });
+    } else {
+      const f = t.fmt || (t.fmt = { cells: {}, rows: {}, cols: {} }),
+        o = f.cols[colMenu] || (f.cols[colMenu] = {});
+      o[k] = !o[k];
+      if (!o.b && !o.h) delete f.cols[colMenu];
+    }
+    save();
+    render();
+    pintarColMenu();
+  });
+  $("dlgColMenu").addEventListener("change", (e) => {
+    if (e.target.name !== "cmPie" || !colMenu) return;
+    const c = colById(cur(), colMenu);
+    snap();
+    if (e.target.value) c.pie = e.target.value;
+    else delete c.pie;
+    save();
+    render();
+  });
+  $("cmEditar").onclick = () => {
+    const id = colMenu;
+    $("dlgColMenu").close();
+    openCol(id);
+  };
 
   /* ---------- vistas guardadas ----------
      Una vista es una búsqueda, un filtro y un orden con nombre, guardados en su tabla (t.vistas).
@@ -830,6 +971,7 @@
       snap();
       r0.c[ck.dataset.check] = ck.checked;
       save();
+      pintarPie(t0);
       return;
     }
     const inp = e.target.closest("[data-cell]");
@@ -852,6 +994,7 @@
       td.className = "calc " + (typeof v === "number" ? "n " : "") + numCls(v) + fcls(t, r, cc);
     });
     save();
+    pintarPie(t);
   });
   $("grid").addEventListener("click", (e) => {
     const t = cur(),
@@ -872,7 +1015,7 @@
       t.view = { s: { col: ui.sort.col, dir: ui.sort.dir }, s2: { col: ui.sort2.col, dir: ui.sort2.dir } };
       save();
       render();
-    } else if (b.dataset.col) openCol(b.dataset.col);
+    } else if (b.dataset.col) abrirColMenu(b.dataset.col);
     else if (b.dataset.pick) openPick(b.closest("tr").dataset.id, b.dataset.pick);
     else if (b.dataset.opt) openOpt(b.closest("tr").dataset.id, b.dataset.opt);
     else if ("del" in b.dataset) {
@@ -1578,7 +1721,7 @@
           .join("") +
         "</tr>";
     });
-    $("prTabla").innerHTML = h + "</tbody>";
+    $("prTabla").innerHTML = h + "</tbody><tfoot>" + pieFila(t, rows, true) + "</tfoot>";
     $("prTitulo").textContent = t.name;
     $("prMeta").textContent =
       new Date().toLocaleDateString("es-MX", { dateStyle: "long" }) +
@@ -1986,6 +2129,7 @@
           c.name = txt(c.name, "");
           if (c.options !== undefined) c.options = Array.isArray(c.options) ? c.options.map(String) : [];
           if (c.type === "formula") c.expr = txt(c.expr, "");
+          if (c.pie !== undefined && !["sum", "avg", "count"].includes(c.pie)) delete c.pie;
         }
         for (const r of t.rows) {
           if (!obj(r) || !id(r.id)) return false;

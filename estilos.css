@@ -1357,3 +1357,27 @@ a.btn {
 .vistas .btn:focus-visible {
   outline-offset: -3px;
 }
+
+/* ---------- columna seleccionada y totales al pie ---------- */
+.wrap .colsel {
+  outline: 2px dashed var(--fg);
+  outline-offset: -2px;
+}
+tfoot td.pie-c {
+  padding: 6px 10px;
+  border-top: 2px solid var(--fg);
+  border-bottom: 0;
+  background: var(--surface);
+  white-space: nowrap;
+  font-weight: 600;
+  text-align: right;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.pie-l {
+  display: block;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+}

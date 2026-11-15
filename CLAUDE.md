@@ -22,6 +22,7 @@ Al abrir la web se muestra la página de inicio (libros, reportes guardados y re
 ## Compatibilidad de datos
 - El estado guardado (clave `bases-unificadas-v1`) debe seguir abriendo después de cada cambio. Si cambias la forma de los datos, agrega una migración que convierta el estado anterior; no rompas respaldos existentes.
 - Tipos de columna: text, number, date, select, multi, check, relation, lookup, formula, sum.
+- Cada columna puede llevar `pie` (`sum`, `avg` o `count`): el total que muestra al pie. También es opcional.
 - Cada tabla puede llevar `vistas` (búsqueda, filtro y orden con nombre). Es un campo opcional: una tabla sin él sigue abriendo igual.
 - Todo respaldo pasa por `revisarEstado` antes de restaurarse. Si agregas un campo que se escribe en la página, revísalo ahí y escápalo con `esc` al pintarlo.
 - Si el navegador no deja guardar, se muestra el aviso `avisoGuardado`; no ocultes ese error.
@@ -37,6 +38,7 @@ Al abrir la web se muestra la página de inicio (libros, reportes guardados y re
 - La página no se desplaza a los lados; solo las tablas, dentro de su contenedor.
 - Tipografía: IBM Plex Sans para texto, IBM Plex Mono para números.
 - Textos en español claro, sin términos técnicos. Los botones dicen lo que hacen con un verbo.
+- El tamaño de letra solo se cambia para la tabla completa (Opciones); no lo agregues como formato de celda, fila o columna.
 - Borrados: filas y formato se deshacen; columnas, tablas, libros y salas piden un segundo toque.
 
 ## Dentro y fuera de Claude
