@@ -306,6 +306,7 @@
     <div class="prbar"><strong id="repBarT">Nuevo reporte</strong>
       <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn sm" id="repInfoBtn" type="button" aria-expanded="false" aria-controls="repInfo" hidden>Información</button>
+        <button class="btn sm" id="repPresentar" type="button">Presentar</button>
         <button class="btn sm" id="repImprimir" type="button" data-nativo hidden>Imprimir</button>
         <button class="btn sm pri" id="repGuardar" type="button">Guardar reporte</button>
         <button class="btn sm" type="button" data-close>Cerrar</button></span></div>
@@ -337,6 +338,21 @@
     <div class="rp" id="repHoja"></div>
     <section class="info" id="repInfo" aria-label="Información del reporte" hidden></section>
     <div class="fila" id="repAcc" hidden><button class="btn sm izq" id="repBorrar" type="button">Eliminar reporte</button></div>
+  </div>
+</dialog>
+
+<dialog id="dlgPres" class="full pres" aria-label="Presentación del reporte">
+  <div class="pres-caja" id="presCaja">
+    <div class="pres-esc">
+      <div class="rp pres-slide" id="presSlide" role="group" aria-roledescription="diapositiva" aria-live="polite"></div>
+    </div>
+    <div class="pres-bar">
+      <button class="btn ico" id="presAnt" type="button" aria-label="Diapositiva anterior" title="Anterior (←)">←</button>
+      <output id="presN" aria-hidden="true"></output>
+      <button class="btn ico" id="presSig" type="button" aria-label="Diapositiva siguiente" title="Siguiente (→)">→</button>
+      <button class="btn" id="presFS" type="button" aria-pressed="false" title="Pantalla completa (F)" hidden>Pantalla completa</button>
+      <button class="btn" type="button" data-close>Cerrar</button>
+    </div>
   </div>
 </dialog>
 

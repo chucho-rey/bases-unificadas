@@ -45,7 +45,7 @@ Al abrir la web se muestra la página de inicio (libros, reportes guardados y re
 - Borrados: filas y formato se deshacen; columnas, tablas, libros y salas piden un segundo toque.
 
 ## Dentro y fuera de Claude
-El mismo código corre como página independiente y como artefacto dentro de Claude. La constante `NATIVO` distingue los dos casos: fuera de Claude se usan la descarga y la impresión del navegador; dentro, la capacidad `downloads` y solo vista previa de impresión. Para publicarlo como artefacto, `estilos.css` y `app.js` se suben junto con `index.html` como archivos de apoyo.
+El mismo código corre como página independiente y como artefacto dentro de Claude. La constante `NATIVO` distingue los dos casos: fuera de Claude se usan la descarga y la impresión del navegador; dentro, la capacidad `downloads` y solo vista previa de impresión. El botón de pantalla completa de la presentación solo aparece donde el navegador la permite. Para publicarlo como artefacto, `estilos.css` y `app.js` se suben junto con `index.html` como archivos de apoyo.
 
 ## Antes de subir un cambio
 - Comprueba la sintaxis (`node --check app.js`) y corre `node pruebas/flujo.js`; agrega ahí una comprobación del flujo que tocaste.

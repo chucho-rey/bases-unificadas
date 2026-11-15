@@ -2783,6 +2783,211 @@
     recalcRep();
   };
 
+  /* ---------- presentación ----------
+     El reporte en pantalla, como diapositivas: portada, cifras, el desglose en grupos de cinco y, si hay
+     segundo desglose, una diapositiva por grupo. Se expone desde la web, con opción de pantalla completa.
+     El detalle de filas no entra: es para leerse, no para proyectarse. */
+  let pres = null;
+  function armarPres(r) {
+    const d = r.data,
+      f = fechaTxt(r.at || Date.now()),
+      S = [],
+      conSuma = d.total !== null,
+      usaSuma = conSuma && d.groups.some((o) => o.sum !== 0),
+      peso = (o) => Math.abs(usaSuma ? o.sum : o.n),
+      filas = (arr, max) =>
+        '<div class="ps-g">' +
+        arr
+          .map(
+            (o) =>
+              '<span class="ps-k">' +
+              esc(o.k) +
+              '</span><span class="ps-n">' +
+              o.n +
+              (o.n === 1 ? " registro" : " registros") +
+              '</span><span class="ps-n ps-s">' +
+              (conSuma ? esc(fmt(o.sum)) : "") +
+              '</span><span class="ps-bar"><i style="width:' +
+              Math.round((peso(o) / max) * 100) +
+              '%"></i></span>',
+          )
+          .join("") +
+        "</div>",
+      enPartes = (arr, n) => {
+        const out = [];
+        for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+        return out;
+      };
+    S.push({
+      t: "Portada",
+      portada: true,
+      h:
+        '<p class="ps-eye">Reporte</p><h2 class="ps-tit">' +
+        esc(r.title || "Sin título") +
+        '</h2><p class="ps-meta">' +
+        esc(f.fecha + " · " + r.bookName + " › " + r.tableName) +
+        "</p>" +
+        (r.filtro && r.filtro !== "Sin filtro" ? '<p class="ps-meta">' + esc(r.filtro) + "</p>" : ""),
+    });
+    S.push({
+      t: "Cifras",
+      h:
+        '<h3 class="ps-h">Cifras</h3><div class="ps-tiles"><div class="ps-tile"><b>' +
+        esc(fmt(d.n)) +
+        "</b><span>Registros</span></div>" +
+        (conSuma
+          ? '<div class="ps-tile"><b>' +
+            esc(fmt(d.total)) +
+            "</b><span>Total de " +
+            esc(d.sName) +
+            "</span></div>"
+          : "") +
+        (d.gName
+          ? '<div class="ps-tile"><b>' +
+            d.groups.length +
+            "</b><span>" +
+            esc(d.gName) +
+            ": valores distintos</span></div>"
+          : "") +
+        "</div>",
+    });
+    if (d.gName) {
+      const max = Math.max(1, ...d.groups.map(peso)),
+        partes = enPartes(d.groups, 5);
+      partes.forEach((arr, i) =>
+        S.push({
+          t: "Por " + d.gName,
+          h:
+            '<h3 class="ps-h">Por ' +
+            esc(d.gName) +
+            (partes.length > 1 ? " <small>" + (i + 1) + " de " + partes.length + "</small>" : "") +
+            "</h3>" +
+            filas(arr, max),
+        }),
+      );
+      if (d.g2Name)
+        d.groups.forEach((o) => {
+          if (!o.sub || !o.sub.length) return;
+          const max2 = Math.max(1, ...o.sub.map(peso)),
+            ps = enPartes(o.sub, 5);
+          ps.forEach((arr, i) =>
+            S.push({
+              t: o.k + " por " + d.g2Name,
+              h:
+                '<p class="ps-eye">' +
+                esc(d.gName) +
+                '</p><h3 class="ps-h">' +
+                esc(o.k) +
+                " <small>por " +
+                esc(d.g2Name) +
+                (ps.length > 1 ? " · " + (i + 1) + " de " + ps.length : "") +
+                "</small></h3>" +
+                '<p class="ps-res">' +
+                o.n +
+                (o.n === 1 ? " registro" : " registros") +
+                (conSuma ? " · " + esc(fmt(o.sum)) : "") +
+                "</p>" +
+                filas(arr, max2),
+            }),
+          );
+        });
+    }
+    return S;
+  }
+  function pintarPres() {
+    const s = pres.S[pres.i],
+      n = pres.S.length,
+      el = $("presSlide");
+    el.dataset.pal = pres.r.pal;
+    el.classList.toggle("es-portada", !!s.portada);
+    el.setAttribute("aria-label", "Diapositiva " + (pres.i + 1) + " de " + n + ": " + s.t);
+    el.innerHTML =
+      '<div class="pres-in">' +
+      s.h +
+      (s.portada ? "" : '<p class="ps-pie">' + esc(pres.r.title || "Sin título") + "</p>") +
+      "</div>";
+    $("presN").textContent = pres.i + 1 + " de " + n;
+    $("presAnt").disabled = pres.i === 0;
+    $("presSig").disabled = pres.i === n - 1;
+  }
+  function irPres(i) {
+    if (!pres) return;
+    pres.i = Math.max(0, Math.min(pres.S.length - 1, i));
+    pintarPres();
+  }
+  /* Pantalla completa: va sobre la caja de la presentación (un diálogo no puede pedirla). Donde el
+     navegador no la permite, como en iPhone o dentro de Claude, el botón no aparece. */
+  const caja = $("presCaja"),
+    enFS = () => document.fullscreenElement || document.webkitFullscreenElement,
+    pideFS = caja.requestFullscreen || caja.webkitRequestFullscreen,
+    saleFS = document.exitFullscreen || document.webkitExitFullscreen,
+    hayFS = !!(pideFS && saleFS && (document.fullscreenEnabled || document.webkitFullscreenEnabled));
+  let quietoT;
+  function despierta() {
+    caja.classList.remove("quieto");
+    clearTimeout(quietoT);
+    if (enFS()) quietoT = setTimeout(() => caja.classList.add("quieto"), 2500);
+  }
+  function syncFS() {
+    const on = !!enFS();
+    $("presFS").textContent = on ? "Salir de pantalla completa" : "Pantalla completa";
+    $("presFS").setAttribute("aria-pressed", String(on));
+    despierta();
+  }
+  function alternaFS() {
+    if (!hayFS) return;
+    try {
+      const x = enFS() ? saleFS.call(document) : pideFS.call(caja);
+      if (x && x.catch) x.catch(() => {});
+    } catch (e) {}
+  }
+  document.addEventListener("fullscreenchange", syncFS);
+  document.addEventListener("webkitfullscreenchange", syncFS);
+  ["pointermove", "pointerdown", "keydown"].forEach((ev) => caja.addEventListener(ev, despierta));
+  $("presFS").onclick = alternaFS;
+  $("repPresentar").onclick = () => {
+    pres = { r: rep.r, S: armarPres(rep.r), i: 0 };
+    $("presFS").hidden = !hayFS;
+    pintarPres();
+    syncFS();
+    $("dlgPres").showModal();
+    $("presSig").focus();
+  };
+  $("presAnt").onclick = () => irPres(pres.i - 1);
+  $("presSig").onclick = () => irPres(pres.i + 1);
+  /* Tocar la diapositiva avanza; tocar su tercio izquierdo regresa. */
+  $("presSlide").addEventListener("click", (e) => {
+    const r = $("presSlide").getBoundingClientRect();
+    irPres(pres.i + (e.clientX - r.left < r.width / 3 ? -1 : 1));
+  });
+  $("dlgPres").addEventListener("keydown", (e) => {
+    if (!pres || e.ctrlKey || e.metaKey || e.altKey) return;
+    const enBoton = e.target.closest && e.target.closest("button"),
+      k = e.key;
+    let i = null;
+    if (k === "ArrowRight" || k === "PageDown" || ((k === " " || k === "Enter") && !enBoton)) i = pres.i + 1;
+    else if (k === "ArrowLeft" || k === "PageUp") i = pres.i - 1;
+    else if (k === "Home") i = 0;
+    else if (k === "End") i = pres.S.length - 1;
+    else if (k === "f" || k === "F") {
+      e.preventDefault();
+      alternaFS();
+      return;
+    }
+    if (i === null) return;
+    e.preventDefault();
+    irPres(i);
+  });
+  $("dlgPres").addEventListener("close", () => {
+    if (enFS() && saleFS)
+      try {
+        const x = saleFS.call(document);
+        if (x && x.catch) x.catch(() => {});
+      } catch (e) {}
+    clearTimeout(quietoT);
+    pres = null;
+  });
+
   /* ---------- plantillas de reporte ----------
      Una plantilla guarda cómo se arma un reporte (desgloses, suma, detalle, paleta y hoja), no sus datos.
      Vive en su tabla (t.plantillas) y se aplica sobre lo que esté en pantalla: cada mes se filtra la tabla,

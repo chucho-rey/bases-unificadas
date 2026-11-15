@@ -9,7 +9,7 @@ Web para guardar tablas, relacionarlas entre sí y consultarlas desde un solo lu
 - Relaciones entre tablas, columnas calculadas y sumas de otra tabla.
 - Menú por columna para dar negritas o resaltado a la columna completa y mostrar su total al pie (suma, promedio o conteo).
 - Buscar, filtrar y ordenar en dos niveles, y guardar esa combinación como una vista con nombre.
-- Reportes con paletas de color, uno o dos desgloses y totales, que se guardan, se repiten con plantillas y se imprimen en carta vertical u horizontal.
+- Reportes con paletas de color, uno o dos desgloses y totales, que se guardan, se repiten con plantillas, se imprimen en carta vertical u horizontal y se exponen en diapositivas con pantalla completa.
 - Respaldo completo en un archivo, con restauración.
 - Tema claro, oscuro y alto contraste.
 
