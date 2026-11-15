@@ -1,0 +1,32 @@
+# Bases unificadas: reglas para trabajar en este repositorio
+
+## Qué es
+Web de tablas relacionadas, en un solo archivo `index.html` (HTML, CSS y JavaScript juntos, sin dependencias ni compilación). Se publica con GitHub Pages desde `main`. La interfaz y los mensajes están en español.
+
+## Regla más importante: ningún dato real en el código
+- El repositorio es público. Nunca agregues datos del usuario (pagos, servicios, nombres de personas, empresas, sucursales, proveedores, libros personales) a `index.html` ni a ningún archivo.
+- Los únicos datos permitidos en el código son las tres tablas de ejemplo: Ventas, Clientes y Productos.
+- Los datos reales viven en el `localStorage` del navegador de cada persona y entran por Opciones › Respaldo › Restaurar.
+- No subas archivos de respaldo (`*.json` con `"app":"bases-unificadas"`).
+
+## Compatibilidad de datos
+- El estado guardado (clave `bases-unificadas-v1`) debe seguir abriendo después de cada cambio. Si cambias la forma de los datos, agrega una migración que convierta el estado anterior; no rompas respaldos existentes.
+- Tipos de columna: text, number, date, select, multi, check, relation, lookup, formula, sum.
+
+## Diseño y accesibilidad
+- Blanco y negro. Solo tres colores con significado: azul para positivos, rojo para negativos, amarillo para resaltado. Los reportes son la excepción y tienen paletas propias.
+- Todos los colores salen de las variables CSS definidas en `:root`; cada tema (claro, oscuro, alto contraste claro y oscuro) redefine las mismas variables.
+- Botones de al menos 40 px (44 px en la barra lateral), foco visible, y nunca usar el color como única señal.
+- Cada control lleva nombre accesible; las tablas declaran encabezados y orden.
+- La página no se desplaza a los lados; solo las tablas, dentro de su contenedor.
+- Tipografía: IBM Plex Sans para texto, IBM Plex Mono para números.
+- Textos en español claro, sin términos técnicos. Los botones dicen lo que hacen con un verbo.
+- Borrados: filas y formato se deshacen; columnas, tablas, libros y salas piden un segundo toque.
+
+## Dentro y fuera de Claude
+El mismo código corre como página independiente y como artefacto dentro de Claude. La constante `NATIVO` distingue los dos casos: fuera de Claude se usan la descarga y la impresión del navegador; dentro, la capacidad `downloads` y solo vista previa de impresión.
+
+## Antes de subir un cambio
+- Comprueba la sintaxis del script y prueba el flujo que tocaste.
+- Revisa que no haya entrado ningún dato real.
+- Describe el cambio en español en el mensaje del commit.
