@@ -87,7 +87,8 @@
       <button class="btn" id="btnTabla" type="button">Tabla</button>
     </div>
     <div class="wrap"><table id="grid"></table></div>
-    <div class="pie"><span id="conteo"></span><button class="btn sm" id="mas" type="button" hidden>Mostrar más</button></div>
+    <div class="piefijo" id="pieFijo" aria-hidden="true" hidden></div>
+    <div class="pie"><span id="conteo"></span><span class="acciones"><button class="btn sm" id="btnOcultas" type="button" hidden></button><button class="btn sm" id="mas" type="button" hidden>Mostrar más</button></span></div>
   </div>
   </div>
 </div>
@@ -146,7 +147,7 @@
 <dialog id="dlgExport" aria-labelledby="expTitulo">
   <div class="form">
     <h2 id="expTitulo">Exportar CSV</h2>
-    <p class="ayuda">Incluye las filas visibles con el filtro y orden actuales. Copia el texto y pégalo en un archivo .csv o en tu hoja de cálculo.</p>
+    <p class="ayuda">Incluye las filas visibles con el filtro y orden actuales, y todas las columnas, también las ocultas. Copia el texto y pégalo en un archivo .csv o en tu hoja de cálculo.</p>
     <textarea class="field" id="expTexto" rows="9" readonly aria-label="Contenido CSV"></textarea>
     <p class="ayuda" id="expMsg" role="status"></p>
     <div class="fila"><button class="btn" type="button" data-close>Cerrar</button><button class="btn" id="expDesc" type="button" data-dl hidden>Descargar .csv</button><button class="btn pri" id="expCopiar" type="button">Copiar</button></div>
@@ -187,7 +188,7 @@
       </div>
       <p class="ayuda" id="cmPieAyuda"></p>
     </section>
-    <div class="fila"><button class="btn izq" id="cmEditar" type="button">Editar columna</button><button class="btn pri" type="button" data-close>Listo</button></div>
+    <div class="fila"><button class="btn izq" id="cmEditar" type="button">Editar columna</button><button class="btn" id="cmOcultar" type="button">Ocultar columna</button><button class="btn pri" type="button" data-close>Listo</button></div>
   </div>
 </dialog>
 
@@ -210,7 +211,12 @@
   <form class="form" id="formTabla">
     <h2 id="tabTitulo">Tabla</h2>
     <label>Nombre<input class="field" id="tabNombre" type="text" autocomplete="off"></label>
-    <p class="ayuda">La primera columna es el nombre que se muestra cuando otra tabla se relaciona con esta.</p>
+    <section class="sec">
+      <h3>Columnas</h3>
+      <ul class="tabcols" id="tabCols" aria-label="Columnas de la tabla"></ul>
+      <p class="ayuda">Desmarca una columna para ocultarla: conserva sus datos y sigue sirviendo para fórmulas y filtros. Las flechas cambian el orden. Estos cambios se aplican al momento.</p>
+      <p class="ayuda">La primera columna es el nombre que se muestra cuando otra tabla se relaciona con esta.</p>
+    </section>
     <div class="fila">
       <button class="btn izq" id="tabBorrar" type="button">Eliminar tabla</button>
       <button class="btn" type="button" data-close>Cancelar</button>

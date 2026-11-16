@@ -262,6 +262,9 @@
   }
   const tableById = (id) => state.tables.find((t) => t.id === id);
   const colById = (t, id) => t.cols.find((c) => c.id === id);
+  /* Las columnas que se muestran. Una columna oculta (c.oculta) conserva sus datos y sigue sirviendo
+     para fórmulas, filtros y desgloses; solo deja de pintarse en la tabla, la impresión y los reportes. */
+  const visibles = (t) => t.cols.filter((c) => !c.oculta);
   const colByName = (t, n) => {
     n = n.toLowerCase();
     return t.cols.find((c) => c.name.toLowerCase() === n);
@@ -465,7 +468,7 @@
     const q = ui.q.trim().toLowerCase();
     if (q)
       rows = rows.filter((r) =>
-        t.cols.some((c) =>
+        visibles(t).some((c) =>
           String(shown(t, r, c))
             .toLowerCase()
             .includes(q),
@@ -655,7 +658,9 @@
     '<tr data-id="' +
     r.id +
     '">' +
-    t.cols.map((c) => cellHTML(t, r, c)).join("") +
+    visibles(t)
+      .map((c) => cellHTML(t, r, c))
+      .join("") +
     '<td><button type="button" class="del" data-del aria-label="Eliminar fila">×</button></td></tr>';
 
   function render() {
@@ -702,7 +707,7 @@
       page = rows.slice(0, ui.limit);
     let h =
       "<thead><tr>" +
-      t.cols
+      visibles(t)
         .map((c) => {
           const s = ui.sort.col === c.id,
             s2 = !s && ui.sort2.col === c.id,
@@ -733,20 +738,26 @@
     if (!page.length)
       h +=
         '<tr><td class="calc" colspan="' +
-        (t.cols.length + 1) +
+        (visibles(t).length + 1) +
         '" style="color:var(--muted)">' +
         (t.rows.length ? "Ninguna fila coincide." : "Sin filas. Toca “+ Fila”.") +
         "</td></tr>";
     $("grid").innerHTML = h + "</tbody><tfoot>" + pieFila(t, rows) + "</tfoot>";
     if (colMenu) marcaCol();
+    pintarPieFijo(t, rows);
     $("conteo").textContent =
       (rows.length === t.rows.length ? t.rows.length : rows.length + " de " + t.rows.length) +
       (t.rows.length === 1 ? " fila" : " filas");
+    const ocultas = t.cols.length - visibles(t).length;
+    $("btnOcultas").hidden = !ocultas;
+    $("btnOcultas").textContent =
+      ocultas === 1 ? "Mostrar 1 columna oculta" : "Mostrar " + ocultas + " columnas ocultas";
     $("mas").hidden = rows.length <= ui.limit;
   }
   function goTab(id) {
     sel = null;
     ui.tab = id;
+    ui.vistaId = "";
     ui.q = "";
     ui.f = { col: "", op: "has", val: "" };
     {
@@ -789,10 +800,10 @@
   }
   /* La fila del pie, o nada si ninguna columna tiene total. En impresión no lleva la columna de acciones. */
   function pieFila(t, rows, impresion) {
-    if (!t.cols.some((c) => c.pie)) return "";
+    if (!visibles(t).some((c) => c.pie)) return "";
     return (
       "<tr>" +
-      t.cols
+      visibles(t)
         .map((c) => {
           if (!c.pie) return '<td class="pie-c"></td>';
           const o = totalDe(t, rows, c);
@@ -813,7 +824,41 @@
   }
   function pintarPie(t) {
     const tf = $("grid").querySelector("tfoot");
-    if (tf && t.cols.some((c) => c.pie)) tf.innerHTML = pieFila(t, view(t));
+    if (!tf || !visibles(t).some((c) => c.pie)) return;
+    const rows = view(t);
+    tf.innerHTML = pieFila(t, rows);
+    pintarPieFijo(t, rows);
+  }
+  /* El pie fijo: mientras el pie de la tabla queda fuera de la pantalla (tabla larga), los mismos totales
+     se muestran pegados al borde inferior. Es una copia visual; el pie de la tabla es el que se lee. */
+  const veoPie =
+    "IntersectionObserver" in window
+      ? new IntersectionObserver((es) => {
+          $("pieFijo").classList.toggle("fuera", es[es.length - 1].isIntersecting);
+        })
+      : null;
+  function pintarPieFijo(t, rows) {
+    const cs = visibles(t).filter((c) => c.pie),
+      tf = $("grid").querySelector("tfoot");
+    $("pieFijo").hidden = !cs.length || !veoPie;
+    if (!veoPie) return;
+    veoPie.disconnect();
+    if (!cs.length) return;
+    $("pieFijo").innerHTML = cs
+      .map((c) => {
+        const o = totalDe(t, rows, c);
+        return (
+          "<span><small>" +
+          esc(c.name + " · " + o.l) +
+          '</small><b class="' +
+          (c.pie === "count" ? "" : numCls(o.v)) +
+          '">' +
+          esc(o.v === "" ? "sin datos" : fmt(o.v)) +
+          "</b></span>"
+        );
+      })
+      .join("");
+    veoPie.observe(tf);
   }
 
   /* ---------- menú de columna ----------
@@ -834,6 +879,7 @@
         $(id).textContent = (on ? "✓ " : "") + txt;
       };
     $("cmT").textContent = "Columna " + c.name;
+    $("cmOcultar").disabled = visibles(t).length < 2;
     pon("cmB", "Negritas", f.b);
     pon("cmH", "Resaltar", f.h);
     const hayFmt = !!(
@@ -894,6 +940,17 @@
     save();
     render();
   });
+  $("cmOcultar").onclick = () => {
+    const t = cur(),
+      c = colById(t, colMenu);
+    if (visibles(t).length < 2) return;
+    snap();
+    c.oculta = true;
+    $("dlgColMenu").close();
+    save();
+    render();
+    toast("Columna " + c.name + " oculta", undoApp);
+  };
   $("cmEditar").onclick = () => {
     const id = colMenu;
     $("dlgColMenu").close();
@@ -925,6 +982,7 @@
     const a = vistaAhora(),
       vs = t.vistas || [],
       act = vs.find((v) => coincide(v, a)),
+      ult = vs.find((v) => v.id === ui.vistaId),
       marca = (on) => 'aria-pressed="' + on + '">' + (on ? '<span aria-hidden="true">✓ </span>' : "");
     $("vistas").innerHTML =
       '<button type="button" class="btn sm" data-todas ' +
@@ -941,6 +999,13 @@
             "</button>",
         )
         .join("") +
+      (!act && ult
+        ? '<button type="button" class="btn sm" data-actualizar="' +
+          ult.id +
+          '">Actualizar «' +
+          esc(ult.name) +
+          "»</button>"
+        : "") +
       (act
         ? '<button type="button" class="btn sm" data-editar="' +
           act.id +
@@ -951,6 +1016,7 @@
   }
   function aplicarVista(v) {
     const t = cur();
+    ui.vistaId = v.id;
     ui.q = v.q;
     ui.f = { col: colById(t, v.f.col) ? v.f.col : "", op: v.f.op, val: v.f.val };
     if (v.s.col) {
@@ -1005,7 +1071,18 @@
       const again = $("vistas").querySelector('[data-vista="' + v.id + '"]');
       if (again) again.focus();
     } else if (b.dataset.editar) abrirVista(busca(b.dataset.editar));
-    else abrirVista();
+    else if (b.dataset.actualizar) {
+      /* La vista que se abrió y luego se cambió en pantalla: guarda en ella lo que se ve ahora. */
+      const v = busca(b.dataset.actualizar);
+      if (!v) return;
+      snap();
+      Object.assign(v, vistaAhora());
+      save();
+      render();
+      const again = $("vistas").querySelector('[data-vista="' + v.id + '"]');
+      if (again) again.focus();
+      toast("Vista " + v.name + " actualizada", undoApp);
+    } else abrirVista();
   });
   $("formVista").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -1021,7 +1098,11 @@
     }
     snap();
     if (vistaEdit) vistaEdit.name = n;
-    else (t.vistas = t.vistas || []).push(Object.assign({ id: "v_" + uid(), name: n }, vistaAhora()));
+    else {
+      const v = Object.assign({ id: "v_" + uid(), name: n }, vistaAhora());
+      (t.vistas = t.vistas || []).push(v);
+      ui.vistaId = v.id;
+    }
     $("dlgVista").close();
     save();
     render();
@@ -1585,11 +1666,77 @@
   });
 
   /* ---------- tabla y ajustes ---------- */
-  $("btnTabla").onclick = () => {
+  /* Lista de columnas de la tabla: la casilla la muestra u oculta y las flechas cambian su orden.
+     Los cambios se aplican al momento y se deshacen con ↶. */
+  function pintarTabCols() {
+    const t = cur(),
+      una = visibles(t).length < 2;
+    $("tabCols").innerHTML = t.cols
+      .map(
+        (c, i) =>
+          '<li><label class="chk"><input type="checkbox" data-ver="' +
+          c.id +
+          '"' +
+          (c.oculta ? "" : " checked") +
+          (!c.oculta && una ? " disabled" : "") +
+          '><span class="ntx">' +
+          esc(c.name) +
+          (i === 0 ? ' <span class="vac">(nombre de la fila)</span>' : "") +
+          '</span></label><button type="button" class="btn ico" data-mover="' +
+          c.id +
+          '" data-d="-1" aria-label="Mover ' +
+          esc(c.name) +
+          ' antes"' +
+          (i === 0 ? " disabled" : "") +
+          '>↑</button><button type="button" class="btn ico" data-mover="' +
+          c.id +
+          '" data-d="1" aria-label="Mover ' +
+          esc(c.name) +
+          ' después"' +
+          (i === t.cols.length - 1 ? " disabled" : "") +
+          ">↓</button></li>",
+      )
+      .join("");
+  }
+  $("tabCols").addEventListener("change", (e) => {
+    const id = e.target.dataset.ver,
+      t = cur(),
+      c = id && colById(t, id);
+    if (!c) return;
+    snap();
+    if (e.target.checked) delete c.oculta;
+    else c.oculta = true;
+    save();
+    render();
+    pintarTabCols();
+    const again = $("tabCols").querySelector('[data-ver="' + id + '"]');
+    if (again) again.focus();
+  });
+  $("tabCols").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-mover]"),
+      t = cur();
+    if (!b) return;
+    const i = t.cols.findIndex((c) => c.id === b.dataset.mover),
+      j = i + Number(b.dataset.d);
+    if (i < 0 || j < 0 || j >= t.cols.length) return;
+    snap();
+    t.cols.splice(j, 0, t.cols.splice(i, 1)[0]);
+    dirty();
+    render();
+    pintarTabCols();
+    const again = $("tabCols").querySelector(
+      '[data-mover="' + b.dataset.mover + '"][data-d="' + b.dataset.d + '"]',
+    );
+    if (again) (again.disabled ? again.parentElement.querySelector("button:not(:disabled)") : again).focus();
+  });
+  function abrirTabla() {
     $("tabNombre").value = cur().name;
     disarm($("tabBorrar"), "Eliminar tabla");
+    pintarTabCols();
     $("dlgTabla").showModal();
-  };
+  }
+  $("btnTabla").onclick = abrirTabla;
+  $("btnOcultas").onclick = abrirTabla;
   $("formTabla").addEventListener("submit", (e) => {
     e.preventDefault();
     const n = $("tabNombre").value.trim();
@@ -1780,14 +1927,14 @@
     const numCol = (c) => c.type === "number" || c.type === "formula" || c.type === "sum";
     let h =
       "<thead><tr>" +
-      t.cols
+      visibles(t)
         .map((c) => '<th scope="col"' + (numCol(c) ? ' class="n"' : "") + ">" + esc(c.name) + "</th>")
         .join("") +
       "</tr></thead><tbody>";
     rows.slice(0, MAX).forEach((r) => {
       h +=
         "<tr>" +
-        t.cols
+        visibles(t)
           .map((c) => {
             const v = shown(t, r, c);
             return (
@@ -2221,7 +2368,10 @@
           if (c.options !== undefined) c.options = Array.isArray(c.options) ? c.options.map(String) : [];
           if (c.type === "formula") c.expr = txt(c.expr, "");
           if (c.pie !== undefined && !["sum", "avg", "count"].includes(c.pie)) delete c.pie;
+          if (c.oculta) c.oculta = true;
+          else delete c.oculta;
         }
+        if (t.cols.length && t.cols.every((c) => c.oculta)) delete t.cols[0].oculta;
         for (const r of t.rows) {
           if (!obj(r) || !id(r.id)) return false;
           if (!obj(r.c)) r.c = {};
@@ -2514,7 +2664,7 @@
     const MAX = 500,
       d = {
         n: rows.length,
-        ncols: t.cols.length,
+        ncols: visibles(t).length,
         total: sc ? Math.round(total * 100) / 100 : null,
         gName: gc ? gc.name : "",
         g2Name: g2c ? g2c.name : "",
@@ -2522,13 +2672,14 @@
         groups,
       };
     if (det) {
-      d.head = t.cols.map((c) => c.name);
-      d.num = t.cols.map(esNum);
-      d.body = rows.slice(0, MAX).map((r) => t.cols.map((c) => String(fmt(shown(t, r, c)))));
+      const cs = visibles(t);
+      d.head = cs.map((c) => c.name);
+      d.num = cs.map(esNum);
+      d.body = rows.slice(0, MAX).map((r) => cs.map((c) => String(fmt(shown(t, r, c)))));
       d.mas = Math.max(0, rows.length - MAX);
       /* Totales al final del detalle: el que cada columna tenga elegido al pie de su tabla y, si no
          eligió ninguno, la suma de la columna que el reporte suma. Usan todas las filas, no solo las 500. */
-      const pie = t.cols.map((c) => {
+      const pie = cs.map((c) => {
         const o = c.pie ? totalDe(t, rows, c) : sc && c.id === sc.id ? { l: "Suma", v: d.total } : null;
         return o ? { l: o.l, v: o.v === "" ? "sin datos" : String(fmt(o.v)) } : null;
       });

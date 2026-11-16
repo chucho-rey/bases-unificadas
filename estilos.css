@@ -1688,3 +1688,78 @@ dialog.pres {
   padding: 8px 12px;
   line-height: 1.35;
 }
+
+/* ---------- pie fijo de totales ---------- */
+.piefijo {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  margin-top: -14px;
+  padding: 8px 2px calc(8px + env(safe-area-inset-bottom, 0px));
+  background: var(--bg);
+  border-top: 2px solid var(--fg);
+}
+.piefijo.fuera {
+  display: none;
+}
+.piefijo span {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+}
+.piefijo small {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.piefijo b {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+
+/* ---------- columnas de la tabla: mostrar, ocultar y ordenar ---------- */
+.tabcols {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border: var(--bw) solid var(--line);
+  border-radius: 4px;
+}
+.tabcols li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border-bottom: var(--bw) solid var(--line);
+}
+.tabcols li:last-child {
+  border-bottom: 0;
+}
+.tabcols .chk {
+  flex: 1;
+  min-width: 0;
+  flex-direction: row;
+  font-weight: 400;
+  font-size: 15px;
+  cursor: pointer;
+}
+.tabcols .chk input {
+  flex: none;
+}
+
+/* El botón del aviso también mide 40 px. */
+.toast {
+  padding-block: 4px;
+}
+.toast .link {
+  flex: none;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0 6px;
+}

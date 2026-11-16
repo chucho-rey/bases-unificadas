@@ -90,6 +90,16 @@ function comprobar(nombre, ok, detalle) {
   comprobar("se puede eliminar", (await p.locator("#vistas [data-vista]").count()) === 0);
   await p.click("#toastBtn");
   comprobar("y la eliminación se deshace", (await p.locator("#vistas [data-vista]").count()) === 1);
+  await p.click("#vistas [data-vista]");
+  comprobar("con la vista sin cambios no se ofrece actualizarla", (await p.locator("#vistas [data-actualizar]").count()) === 0);
+  await p.fill("#buscar", "guadalajara");
+  await p.waitForTimeout(250);
+  comprobar("al cambiar la búsqueda se ofrece actualizar la vista", (await p.locator("#vistas [data-actualizar]").textContent()) === "Actualizar «Solo Puebla»");
+  await p.click("#vistas [data-actualizar]");
+  comprobar("la vista queda con lo que hay en pantalla", (await marcada("[data-vista]")) === "true" && (await conteo()) === "2 de 6 filas");
+  await p.click("#vistas [data-todas]");
+  await p.click("#vistas [data-vista]");
+  comprobar("y lo recuerda", (await p.inputValue("#buscar")) === "guadalajara");
   await p.click('#grid [data-sort="v_can"]');
   await p.click('#grid [data-sort="v_can"]');
   await p.click("#vistas [data-todas]");
@@ -146,6 +156,48 @@ function comprobar(nombre, ok, detalle) {
     await p.check('#dlgColMenu input[value=""]');
     await p.click("#dlgColMenu [data-close]");
   }
+
+  console.log("Ocultar y ordenar columnas");
+  const ths = () => p.locator("#grid thead th").count();
+  await p.click('#grid [data-col="v_ciu"]');
+  await p.click("#cmOcultar");
+  comprobar("ocultar desde el menú de la columna", (await ths()) === 7 && (await p.locator("#btnOcultas").textContent()) === "Mostrar 1 columna oculta");
+  await p.fill("#buscar", "puebla");
+  await p.waitForTimeout(250);
+  comprobar("la búsqueda no mira las columnas ocultas", (await conteo()) === "0 de 6 filas", await conteo());
+  await p.fill("#buscar", "");
+  await p.waitForTimeout(250);
+  await p.click("#btnOcultas");
+  comprobar("la tabla lista todas sus columnas", (await p.locator("#tabCols li").count()) === 7 && !(await p.locator('#tabCols [data-ver="v_ciu"]').isChecked()));
+  comprobar("botones de 40 px o más", (await chicos()).length === 0, await chicos());
+  await p.check('#tabCols [data-ver="v_ciu"]');
+  comprobar("volver a mostrarla", (await ths()) === 8);
+  await p.uncheck('#tabCols [data-ver="v_can"]');
+  comprobar("una fórmula sigue calculando con una columna oculta", (await p.locator("#grid tbody tr").first().locator('[data-calc="v_tot"]').textContent()) === "1,020");
+  await p.check('#tabCols [data-ver="v_can"]');
+  await p.click('#tabCols [data-mover="v_fol"][data-d="1"]');
+  comprobar("mover una columna cambia el orden", (await p.locator("#grid thead th").first().locator(".th").textContent()).trim() === "Fecha");
+  await p.click('#tabCols [data-mover="v_fol"][data-d="-1"]');
+  comprobar("y regresa", (await p.locator("#grid thead th").first().locator(".th").textContent()).trim() === "Folio");
+  await p.click("#dlgTabla [data-close]");
+
+  console.log("Pie fijo de totales");
+  await p.click('#grid [data-col="v_can"]');
+  await p.check('#dlgColMenu input[value="sum"]');
+  await p.click("#dlgColMenu [data-close]");
+  await p.setViewportSize({ width: 375, height: 360 });
+  await p.evaluate(() => window.scrollTo(0, 0));
+  await p.waitForTimeout(200);
+  comprobar("con el pie fuera de la pantalla, el total queda pegado abajo", (await p.locator("#pieFijo").isVisible()) && (await p.locator("#pieFijo").textContent()) === "Cantidad · Suma53", await p.locator("#pieFijo").textContent());
+  comprobar("el pie fijo no ensancha la página", (await ancho()) <= 0, await ancho());
+  await p.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await p.waitForTimeout(200);
+  comprobar("al llegar al pie de la tabla se quita", await p.locator("#pieFijo").isHidden());
+  await p.setViewportSize({ width: 375, height: 740 });
+  await p.evaluate(() => window.scrollTo(0, 0));
+  await p.click('#grid [data-col="v_can"]');
+  await p.check('#dlgColMenu input[value=""]');
+  await p.click("#dlgColMenu [data-close]");
 
   console.log("Reportes completos");
   await p.evaluate(() => (window.print = () => (window.__impreso = (window.__impreso || 0) + 1)));
