@@ -145,6 +145,42 @@
   /* Datos que solo estaban en localStorage: se copian al almacén principal desde el primer momento. */
   const migrar = !!bd && !!state && state === deLS;
   if (!state) state = {};
+  /* Lo guardado debe abrir siempre. Si algo llegó incompleto (un libro sin tablas, una tabla sin filas),
+     se completa con lo mínimo en lugar de dejar la página en blanco. No se descarta nada que tenga forma. */
+  {
+    const esObj = (x) => !!x && typeof x === "object" && !Array.isArray(x);
+    if (Array.isArray(state.books)) {
+      state.books = state.books.filter((b) => esObj(b) && typeof b.id === "string");
+      state.books.forEach((b) => {
+        if (typeof b.name !== "string") b.name = "Libro";
+        b.tables = (Array.isArray(b.tables) ? b.tables : []).filter(
+          (t) => esObj(t) && typeof t.id === "string" && Array.isArray(t.cols),
+        );
+        b.tables.forEach((t) => {
+          if (typeof t.name !== "string") t.name = "Tabla";
+          t.rows = (Array.isArray(t.rows) ? t.rows : []).filter((r) => esObj(r) && typeof r.id === "string");
+          t.rows.forEach((r) => {
+            if (!esObj(r.c)) r.c = {};
+          });
+        });
+      });
+      if (!state.books.length) delete state.books;
+    }
+    if (
+      state.tree !== undefined &&
+      !(
+        Array.isArray(state.tree) &&
+        state.tree.length &&
+        state.tree.every((n) => esObj(n) && Array.isArray(n.children))
+      )
+    )
+      delete state.tree;
+    if (state.prefs !== undefined && !esObj(state.prefs)) delete state.prefs;
+    if (state.reports !== undefined)
+      state.reports = (Array.isArray(state.reports) ? state.reports : []).filter(
+        (r) => esObj(r) && esObj(r.data) && Array.isArray(r.data.groups),
+      );
+  }
   if (!Array.isArray(state.books)) {
     const ej = Array.isArray(state.tables)
       ? { id: "b_ej", name: "Ejemplo", tables: state.tables, demo: !!state.demo }
@@ -216,10 +252,22 @@
     pendiente = false;
   /* Escribe de inmediato en los dos lugares. Solo avisa si no se pudo guardar en ninguno: que la copia
      de localStorage no quepa es normal cuando hay muchos datos. */
+  /* Dos pestañas abiertas: cada una tiene su copia en memoria y la última que guarda pisaría a la otra.
+     Al guardar se avisa a las demás; la que recibe el aviso deja de guardar y pide recargar. */
+  let canal = null,
+    superada = false;
+  try {
+    canal = new BroadcastChannel("bases-unificadas");
+    canal.onmessage = () => {
+      superada = true;
+      $("avisoPestana").hidden = false;
+    };
+  } catch (e) {}
   function guardarYa() {
     clearTimeout(saveT);
     if (!pendiente) return;
     pendiente = false;
+    if (superada) return;
     state.mod = Date.now();
     const txt = JSON.stringify(state);
     let enLS = true;
@@ -231,6 +279,10 @@
     escribirBD(txt).then((enBD) => {
       $("avisoGuardado").hidden = enBD || enLS;
     });
+    if (canal)
+      try {
+        canal.postMessage(state.mod);
+      } catch (e) {}
   }
   /* Guarda 300 ms después del último cambio, pero nunca espera más de 2 segundos desde el primero:
      así una captura continua no pospone el guardado indefinidamente. */
@@ -520,7 +572,7 @@
   function tipoTxt(t, c) {
     if (c.type === "relation") {
       const tt = tableById(c.table);
-      return "→ " + (tt ? tt.name : "?");
+      return "→ " + (tt ? tt.name : "tabla eliminada");
     }
     if (c.type === "lookup") {
       const rc = colById(t, c.rel);
@@ -661,7 +713,9 @@
     visibles(t)
       .map((c) => cellHTML(t, r, c))
       .join("") +
-    '<td><button type="button" class="del" data-del aria-label="Eliminar fila">×</button></td></tr>';
+    '<td><button type="button" class="del" data-del aria-label="Eliminar fila ' +
+    esc(t.cols[0] ? shown(t, r, t.cols[0]) : "") +
+    '">×</button></td></tr>';
 
   function render() {
     const t = cur();
@@ -675,9 +729,9 @@
       state.tables
         .map(
           (x) =>
-            '<button type="button" class="tab" role="tab" aria-selected="' +
-            (x.id === ui.tab) +
-            '" data-tab="' +
+            '<button type="button" class="tab"' +
+            (x.id === ui.tab ? ' aria-current="true"' : "") +
+            ' data-tab="' +
             x.id +
             '">' +
             esc(x.name) +
@@ -1172,6 +1226,8 @@
       t.view = { s: { col: ui.sort.col, dir: ui.sort.dir }, s2: { col: ui.sort2.col, dir: ui.sort2.dir } };
       save();
       render();
+      const again = $("grid").querySelector('[data-sort="' + id + '"]');
+      if (again) again.focus();
     } else if (b.dataset.col) abrirColMenu(b.dataset.col);
     else if (b.dataset.pick) openPick(b.closest("tr").dataset.id, b.dataset.pick);
     else if (b.dataset.opt) openOpt(b.closest("tr").dataset.id, b.dataset.opt);
@@ -1432,6 +1488,7 @@
         id = colEdit.id;
       snap();
       t.cols = t.cols.filter((c) => c.id !== id);
+      if (t.cols.length && !visibles(t).length) delete t.cols[0].oculta;
       t.rows.forEach((r) => {
         delete r.c[id];
       });
@@ -1456,7 +1513,14 @@
     const t = cur(),
       c = colById(t, colId),
       tt = tableById(c.table);
-    if (!tt) return;
+    if (!tt) {
+      toast(
+        "La tabla relacionada ya no existe. Edita la columna " + c.name + " y elige otra tabla.",
+        () => openCol(c.id),
+        "Editar",
+      );
+      return;
+    }
     pick = { rowId, c, tt };
     $("pickTitulo").textContent = "Elegir de " + tt.name;
     $("pickBuscar").value = "";
@@ -1612,7 +1676,8 @@
   }
   /* Fecha AAAA-MM-DD o día/mes/año; la devuelve como AAAA-MM-DD, o null si no lo es. */
   function fechaCSV(v) {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+    const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+    if (iso) return +iso[2] >= 1 && +iso[2] <= 12 && +iso[3] >= 1 && +iso[3] <= 31 ? v : null;
     const m = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/.exec(v);
     if (!m) return null;
     const d = +m[1],
@@ -1627,7 +1692,9 @@
       $("impError").textContent = "Elige un archivo o pega el contenido.";
       return;
     }
-    const head = data[0],
+    /* Si alguna fila trae más celdas que el encabezado, se agregan columnas para no perder esos datos. */
+    const ancho = Math.max(...data.map((r) => r.length)),
+      head = data[0].concat(Array(ancho - data[0].length).fill("")),
       body = data.slice(1),
       used = new Set();
     const cols = head.map((h, i) => {
@@ -1863,7 +1930,7 @@
     $("ajLibro").value = book().name;
     disarm($("ajLibroDel"), "Eliminar libro");
     $("ajLibroDel").disabled = state.books.length < 2;
-    $("ajDemo").hidden = book().id !== "b_ej";
+    $("ajDemo").hidden = !(book().id === "b_ej" && (state.demo || !state.tables.length));
     $("ajBakInfo").textContent = state.prefs.bak
       ? "Último respaldo: " +
         new Date(state.prefs.bak).toLocaleString("es-MX", { dateStyle: "long", timeStyle: "short" }) +
@@ -2914,6 +2981,7 @@
     $("repS").innerHTML = '<option value="">Sin suma</option>' + opts(t.cols.filter(esNum));
     $("repS").value = s;
     $("repDet").checked = true;
+    $("repPlMsg").textContent = "";
     disarm($("repBorrar"), "Eliminar reporte");
     recalcRep();
     $("dlgRep").showModal();
@@ -2976,7 +3044,9 @@
       t: "Portada",
       portada: true,
       h:
-        '<p class="ps-eye">Reporte</p><h2 class="ps-tit">' +
+        '<p class="ps-eye">Reporte</p><h2 class="ps-tit' +
+        ((r.title || "").length > 45 ? " largo" : "") +
+        '">' +
         esc(r.title || "Sin título") +
         '</h2><p class="ps-meta">' +
         esc(f.fecha + " · " + r.bookName + " › " + r.tableName) +
@@ -3261,7 +3331,9 @@
       t: "Portada",
       portada: true,
       h:
-        '<p class="ps-eye">Comparación</p><h2 class="ps-tit">' +
+        '<p class="ps-eye">Comparación</p><h2 class="ps-tit' +
+        (c.b.title.length > 45 ? " largo" : "") +
+        '">' +
         esc(c.b.title) +
         '</h2><p class="ps-meta">' +
         esc("Antes: " + cuando(c.a)) +
@@ -4109,13 +4181,65 @@
     if (ini) renderInicio();
     if (!sinHistorial)
       try {
-        if ((history.state && history.state.v) !== v) history.pushState({ v }, "");
+        /* Si el diálogo que llevó aquí ya se cerró, su entrada del historial pasa a ser la de esta vista. */
+        if (hist > abiertos().length) {
+          history.replaceState({ v }, "");
+          hist--;
+        } else if ((history.state && history.state.v) !== v) history.pushState({ v }, "");
       } catch (e) {}
     window.scrollTo(0, 0);
   }
-  window.addEventListener("popstate", (e) =>
-    mostrar(e.state && e.state.v === "libro" ? "libro" : "inicio", true),
-  );
+  /* El botón Atrás del navegador o del teléfono cierra primero el diálogo que esté encima, y solo
+     después cambia de vista. Para eso cada diálogo abierto ocupa una entrada del historial (hist), y
+     cuadra() mantiene tantas entradas como diálogos abiertos. Solo fuera de Claude y sin marco, donde
+     el historial es de esta página. */
+  let hist = 0,
+    saltar = 0,
+    sola = false;
+  try {
+    sola = window.top === window.self && !(window.claude && typeof window.claude.use === "function");
+  } catch (e) {}
+  const pila = [];
+  const abiertos = () => pila.filter((d) => d.open);
+  function cuadra() {
+    if (!sola || saltar) return; /* con un retroceso en camino, se cuadra cuando llegue */
+    const n = abiertos().length;
+    try {
+      if (hist > n) {
+        const k = hist - n;
+        hist = n;
+        saltar++;
+        history.go(-k);
+      } else
+        while (hist < n) {
+          history.pushState({ v: ui.vista, dlg: true }, "");
+          hist++;
+        }
+    } catch (e) {}
+  }
+  const abrirModal = HTMLDialogElement.prototype.showModal;
+  HTMLDialogElement.prototype.showModal = function () {
+    abrirModal.call(this);
+    if (!pila.includes(this)) pila.push(this);
+    else pila.push(pila.splice(pila.indexOf(this), 1)[0]);
+    cuadra();
+  };
+  document.querySelectorAll("dialog").forEach((d) => d.addEventListener("close", cuadra));
+  window.addEventListener("popstate", (e) => {
+    if (saltar) {
+      saltar--;
+      cuadra();
+      return;
+    }
+    const ab = abiertos();
+    if (ab.length) {
+      hist = Math.max(0, hist - 1);
+      ab[ab.length - 1].close();
+      return;
+    }
+    mostrar(e.state && e.state.v === "libro" ? "libro" : "inicio", true);
+  });
+  $("avisoRecargar").onclick = () => location.reload();
   $("iniSeguir").onclick = () => mostrar("libro");
   $("iniLibros").addEventListener("click", (e) => {
     const b = e.target.closest("[data-book]");

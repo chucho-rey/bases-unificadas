@@ -29,6 +29,8 @@ Al abrir la web se muestra la página de inicio (libros, reportes guardados y re
 - Cada tabla puede llevar `vistas` (búsqueda, filtro y orden con nombre). Es un campo opcional: una tabla sin él sigue abriendo igual.
 - Todo respaldo pasa por `revisarEstado` antes de restaurarse. Si agregas un campo que se escribe en la página, revísalo ahí y escápalo con `esc` al pintarlo.
 - Si no se pudo guardar en ninguno de los dos lugares, se muestra el aviso `avisoGuardado`; no ocultes ese error.
+- Al abrir, lo guardado se completa con lo mínimo si llegó incompleto (libro sin tablas, tabla sin filas): la página nunca debe quedar en blanco por un dato mal formado.
+- Dos pestañas: al guardar se avisa a las demás por `BroadcastChannel`; la que recibe el aviso deja de guardar y muestra `avisoPestana` hasta recargar. No quites ese bloqueo: sin él, la pestaña vieja pisa los cambios de la nueva.
 
 ## Funciones según la forma del libro
 "Generar mes" e "Importar nota" no están atadas a ningún libro: `piezasGen` y `piezasNota` buscan las tablas y columnas por nombre (lista en el README) y el botón aparece solo si están. No uses identificadores fijos de tablas o columnas en el código; si agregas una función así, búscala por nombre y documenta los nombres en el README.
@@ -43,6 +45,7 @@ Al abrir la web se muestra la página de inicio (libros, reportes guardados y re
 - Textos en español claro, sin términos técnicos. Los botones dicen lo que hacen con un verbo.
 - El tamaño de letra solo se cambia para la tabla completa (Opciones); no lo agregues como formato de celda, fila o columna.
 - Los avisos (`toast`) se muestran dentro del diálogo que esté abierto; fuera de él quedarían tapados.
+- El botón Atrás cierra primero el diálogo que esté encima. Cada diálogo abierto ocupa una entrada del historial y `cuadra()` las mantiene parejas; abre los diálogos siempre con `showModal()` y no llames a `history` directamente.
 - Borrados: filas y formato se deshacen; columnas, tablas, libros y salas piden un segundo toque.
 
 ## Dentro y fuera de Claude

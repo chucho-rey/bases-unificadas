@@ -287,6 +287,86 @@ function comprobar(nombre, ok, detalle) {
   await p.click("#dlgRep [data-close]");
   await p.click("#btnUndo");
 
+  console.log("Dos pestañas");
+  await p.waitForTimeout(600);
+  const otra = await ctx.newPage();
+  await otra.goto(URL_APP);
+  await otra.click("#btnNav");
+  await otra.locator("#nav [data-room]").nth(1).click();
+  await otra.waitForTimeout(600);
+  comprobar("la pestaña que quedó atrás avisa", await p.locator("#avisoPestana").isVisible());
+  comprobar("el aviso no ensancha la página", (await ancho()) <= 0, await ancho());
+  await otra.close();
+  await p.click("#avisoRecargar");
+  await p.click("#iniSeguir");
+  comprobar("al recargar se quita el aviso", await p.locator("#avisoPestana").isHidden());
+  await p.evaluate(() => (window.print = () => {}));
+
+  console.log("Botón Atrás con diálogos abiertos");
+  const visible = (sel) => p.locator(sel).isVisible();
+  await p.click("#btnAjustes");
+  await p.goBack();
+  await p.waitForTimeout(200);
+  comprobar("Atrás cierra Opciones y se queda en el libro", !(await visible("#dlgAjustes")) && (await visible("#vistaLibro")));
+  await p.click("#btnRep");
+  await p.click("#repPresentar");
+  await p.goBack();
+  await p.waitForTimeout(200);
+  comprobar("con dos diálogos, Atrás cierra solo el de encima", !(await visible("#dlgPres")) && (await visible("#dlgRep")));
+  await p.goBack();
+  await p.waitForTimeout(200);
+  comprobar("otro Atrás cierra el reporte", !(await visible("#dlgRep")) && (await visible("#vistaLibro")));
+  await p.click("#btnNav");
+  await p.click("#dlgNav [data-close]");
+  await p.waitForTimeout(200);
+  await p.goBack();
+  await p.waitForTimeout(200);
+  comprobar("sin diálogos, Atrás regresa al inicio", await visible("#vistaInicio"));
+  await p.click("#btnNav");
+  await p.click('#nav [data-book="b_ej"]');
+  await p.waitForTimeout(200);
+  comprobar("abrir un libro desde la barra lateral", await visible("#vistaLibro"));
+  await p.goBack();
+  await p.waitForTimeout(200);
+  comprobar("y un solo Atrás vuelve al inicio", (await visible("#vistaInicio")) && !(await visible("#dlgNav")));
+  await p.click("#iniSeguir");
+
+  console.log("Casos límite");
+  await p.click('#tabs [data-tab="t_cli"]');
+  await p.click("#btnTabla");
+  await p.uncheck('#tabCols [data-ver="c_ciu"]');
+  await p.click("#dlgTabla [data-close]");
+  await p.click('#grid [data-col="c_nom"]');
+  await p.click("#cmEditar");
+  await p.click("#colBorrar");
+  await p.click("#colBorrar");
+  comprobar("al eliminar la única columna visible se muestra otra", (await p.locator("#grid thead .th").count()) === 1);
+  await p.click("#btnUndo");
+  await p.click("#btnUndo");
+  await p.click("#btnTabla");
+  await p.click("#tabBorrar");
+  await p.click("#tabBorrar");
+  await p.click('#tabs [data-tab="t_ven"]');
+  comprobar("una relación hacia una tabla eliminada lo dice", (await p.locator("#grid thead .tipo").nth(2).textContent()) === "→ tabla eliminada");
+  await p.locator("#grid [data-pick]").first().click();
+  comprobar("y al tocarla explica qué hacer", (await p.locator("#toastTxt").textContent()).startsWith("La tabla relacionada ya no existe"));
+  await p.click("#btnUndo");
+  await p.click('#tabs [data-tab="t_ven"]');
+  await p.locator('#grid [data-sort="v_pre"]').focus();
+  await p.keyboard.press("Enter");
+  comprobar("ordenar con el teclado conserva el foco", (await p.evaluate(() => document.activeElement.dataset.sort)) === "v_pre");
+  await p.keyboard.press("Enter");
+  await p.keyboard.press("Enter");
+  await p.click("#btnImport");
+  await p.fill("#impNombre", "Sobrante");
+  await p.fill("#impTexto", "A,F\n1,2026-13-45,extra\n2,2026-02-10");
+  await p.click("#formImport button[type=submit]");
+  comprobar("una celda de más crea su columna en vez de perderse", (await p.locator("#grid thead .th").allTextContents()).map((x) => x.trim()).join() === "A,F,Columna 3");
+  comprobar("una fecha imposible se queda como texto", (await p.locator("#grid thead .tipo").nth(1).textContent()) === "texto");
+  await p.click("#btnTabla");
+  await p.click("#tabBorrar");
+  await p.click("#tabBorrar");
+
   console.log("Fórmulas");
   await p.click('#grid [data-col="v_tot"]');
   await p.click("#cmEditar");
@@ -525,6 +605,11 @@ function comprobar(nombre, ok, detalle) {
   await p2.reload();
   await p2.click("#iniSeguir");
   comprobar("y ya quedaron copiados al almacén grande", (await p2.locator('#grid input[data-cell="cv"]').inputValue()) === "sigo aquí");
+  for (const [nombre, roto] of [["sin libros", { books: [] }], ["con un libro sin tablas", { books: [{ id: "b", name: "B" }] }], ["con una tabla sin filas", { books: [{ id: "b", name: "B", tables: [{ id: "t", name: "T", cols: [{ id: "c", name: "C", type: "text" }] }] }] }]]) {
+    await p2.evaluate((st) => localStorage.setItem("bases-unificadas-v1", JSON.stringify(Object.assign({ mod: Date.now() + 1e7 }, st))), roto);
+    await p2.reload();
+    comprobar("un estado incompleto (" + nombre + ") abre igual", await p2.locator("#iniLibros .ini-item").first().isVisible());
+  }
   await ctx2.close();
 
   comprobar("sin errores en la página", errores.length === 0, errores);

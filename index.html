@@ -22,6 +22,8 @@
   </header>
   <p class="aviso" id="avisoGuardado" role="alert" hidden><span><strong>Atención:</strong> los últimos cambios no se pudieron guardar en este navegador. Crea un respaldo ahora para no perderlos; si hay muchos reportes guardados, elimina los que ya no uses.</span><button class="btn" id="avisoBak" type="button">Crear respaldo</button></p>
 
+  <p class="aviso" id="avisoPestana" role="alert" hidden><span><strong>Atención:</strong> guardaste cambios en otra pestaña. Recarga esta para ver lo último; lo que cambies aquí antes de recargar no se guardará.</span><button class="btn" id="avisoRecargar" type="button">Recargar esta pestaña</button></p>
+
   <main class="vista ini" id="vistaInicio" hidden>
     <section aria-labelledby="iniLead">
       <p class="ini-lead" id="iniLead">Tus tablas, relacionadas y en un solo lugar.</p>
@@ -50,7 +52,7 @@
   <div class="vista" id="vistaLibro" hidden>
   <p class="nota" id="demo"><span>Ventas, Clientes y Productos son tablas de ejemplo.</span> <button class="btn sm" id="btnBlanco" type="button">Quitar las tablas de ejemplo</button></p>
 
-  <div class="tabs" id="tabs" role="tablist" aria-label="Tablas"></div>
+  <div class="tabs" id="tabs" role="group" aria-label="Tablas del libro"></div>
 
   <div class="vacio" id="vacio" hidden>
     <p style="margin:0 0 12px">Aún no hay tablas. Crea una o importa un CSV.</p>

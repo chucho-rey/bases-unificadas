@@ -241,7 +241,7 @@ textarea {
   white-space: nowrap;
   margin-bottom: -1px;
 }
-.tab[aria-selected="true"] {
+.tab[aria-current="true"] {
   color: var(--fg);
   border-bottom-color: var(--fg);
   font-weight: 600;
@@ -1762,4 +1762,24 @@ dialog.pres {
   min-height: 40px;
   min-width: 40px;
   padding: 0 6px;
+}
+
+/* ---------- ajustes de la revisión ---------- */
+/* Un nombre de libro largo baja de renglón en lugar de ensanchar la página. */
+#iniSeguir {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+  max-width: 100%;
+  padding-block: 8px;
+}
+/* Un título largo en la portada de la presentación se achica y se corta a cuatro renglones. */
+.pres-in .ps-tit {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+.pres-in .ps-tit.largo {
+  font-size: calc(var(--u) * 4.2);
 }
