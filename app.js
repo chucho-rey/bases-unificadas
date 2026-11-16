@@ -2714,6 +2714,7 @@
     $("repGuardar").hidden = rep.saved;
     $("repInfoBtn").hidden = !rep.saved;
     $("repAcc").hidden = !rep.saved;
+    $("repCmp").hidden = state.reports.length < 2;
     $("repBarT").textContent = rep.saved ? "Reporte guardado" : "Nuevo reporte";
     $("repInfo").hidden = !(rep.saved && rep.info);
     $("repInfoBtn").setAttribute("aria-expanded", String(!!rep.info));
@@ -2788,6 +2789,13 @@
      segundo desglose, una diapositiva por grupo. Se expone desde la web, con opción de pantalla completa.
      El detalle de filas no entra: es para leerse, no para proyectarse. */
   let pres = null;
+  /* Reparte en diapositivas de cinco como máximo, parejas: seis grupos son 3 y 3, no 5 y 1. */
+  function enPartes(arr, max) {
+    const n = Math.ceil(arr.length / Math.ceil(arr.length / max)) || 1,
+      out = [];
+    for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+    return out;
+  }
   function armarPres(r) {
     const d = r.data,
       f = fechaTxt(r.at || Date.now()),
@@ -2812,12 +2820,7 @@
               '%"></i></span>',
           )
           .join("") +
-        "</div>",
-      enPartes = (arr, n) => {
-        const out = [];
-        for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
-        return out;
-      };
+        "</div>";
     S.push({
       t: "Portada",
       portada: true,
@@ -2898,13 +2901,13 @@
     const s = pres.S[pres.i],
       n = pres.S.length,
       el = $("presSlide");
-    el.dataset.pal = pres.r.pal;
+    el.dataset.pal = pres.pal;
     el.classList.toggle("es-portada", !!s.portada);
     el.setAttribute("aria-label", "Diapositiva " + (pres.i + 1) + " de " + n + ": " + s.t);
     el.innerHTML =
       '<div class="pres-in">' +
       s.h +
-      (s.portada ? "" : '<p class="ps-pie">' + esc(pres.r.title || "Sin título") + "</p>") +
+      (s.portada ? "" : '<p class="ps-pie">' + esc(pres.title || "Sin título") + "</p>") +
       "</div>";
     $("presN").textContent = pres.i + 1 + " de " + n;
     $("presAnt").disabled = pres.i === 0;
@@ -2945,14 +2948,15 @@
   document.addEventListener("webkitfullscreenchange", syncFS);
   ["pointermove", "pointerdown", "keydown"].forEach((ev) => caja.addEventListener(ev, despierta));
   $("presFS").onclick = alternaFS;
-  $("repPresentar").onclick = () => {
-    pres = { r: rep.r, S: armarPres(rep.r), i: 0 };
+  function presentar(pal, title, S) {
+    pres = { pal, title, S, i: 0 };
     $("presFS").hidden = !hayFS;
     pintarPres();
     syncFS();
     $("dlgPres").showModal();
     $("presSig").focus();
-  };
+  }
+  $("repPresentar").onclick = () => presentar(rep.r.pal, rep.r.title, armarPres(rep.r));
   $("presAnt").onclick = () => irPres(pres.i - 1);
   $("presSig").onclick = () => irPres(pres.i + 1);
   /* Tocar la diapositiva avanza; tocar su tercio izquierdo regresa. */
@@ -2987,6 +2991,217 @@
     clearTimeout(quietoT);
     pres = null;
   });
+
+  /* ---------- comparar dos reportes guardados ----------
+     La comparación no se guarda: se calcula al momento con dos reportes que ya son fotografías.
+     "Antes" es siempre el más antiguo. Compara las sumas si los dos reportes suman algo; si no, los
+     conteos. Los cambios llevan signo y flecha, no color: así se leen igual en cualquier paleta. */
+  let cmp = null;
+  function comparar(x, y) {
+    const [a, b] = new Date(x.at) <= new Date(y.at) ? [x, y] : [y, x],
+      conSuma = a.data.total !== null && b.data.total !== null,
+      v = (o) => (o ? (conSuma ? o.sum : o.n) : null),
+      r2 = (n) => Math.round(n * 100) / 100,
+      ma = new Map(a.data.groups.map((o) => [o.k, o])),
+      mb = new Map(b.data.groups.map((o) => [o.k, o])),
+      fila = (k, va, vb) => {
+        const d = r2((vb || 0) - (va || 0));
+        return { k, a: va, b: vb, d, pct: va ? Math.round((d / Math.abs(va)) * 1000) / 10 : null };
+      };
+    const filas = [...new Set([...mb.keys(), ...ma.keys()])].map((k) => fila(k, v(ma.get(k)), v(mb.get(k))));
+    filas.sort((p, q) => Math.abs(q.d) - Math.abs(p.d) || p.k.localeCompare(q.k, "es"));
+    return {
+      a,
+      b,
+      conSuma,
+      medida: conSuma
+        ? a.data.sName === b.data.sName
+          ? a.data.sName
+          : a.data.sName + " / " + b.data.sName
+        : "Registros",
+      grupo: a.data.gName === b.data.gName ? a.data.gName : "",
+      filas: a.data.gName && b.data.gName ? filas : [],
+      total: conSuma ? fila("Total", a.data.total, b.data.total) : null,
+      reg: fila("Registros", a.data.n, b.data.n),
+    };
+  }
+  const cambio = (f) =>
+    f.a === null
+      ? "nuevo"
+      : f.b === null
+        ? "ya no está"
+        : f.d === 0
+          ? "sin cambio"
+          : (f.d > 0 ? "▲ +" : "▼ −") + fmt(Math.abs(f.d));
+  const pctTxt = (f) =>
+    f.a === null || f.b === null || f.pct === null || f.d === 0
+      ? ""
+      : (f.pct > 0 ? "+" : f.pct < 0 ? "−" : "") + fmt(Math.abs(f.pct)) + " %";
+  const num0 = (x) => (x === null ? "—" : fmt(x));
+  const cuando = (r) => {
+    const f = fechaTxt(r.at);
+    return r.title + " · " + f.fecha + " · " + f.hora;
+  };
+  function pintarCmp() {
+    const c = cmp,
+      tile = (f, txt) =>
+        '<div class="rp-tile"><b>' +
+        esc(cambio(f)) +
+        "</b><span>" +
+        esc(txt + ": de " + num0(f.a) + " a " + num0(f.b) + (pctTxt(f) ? " (" + pctTxt(f) + ")" : "")) +
+        "</span></div>";
+    $("cmpHoja").dataset.pal = c.b.pal;
+    let h =
+      '<div class="rp-head"><p class="rp-eye">Comparación</p><h2>' +
+      esc(c.b.title) +
+      '</h2><p class="rp-meta">' +
+      esc("Antes: " + cuando(c.a)) +
+      "<br>" +
+      esc("Después: " + cuando(c.b)) +
+      '</p></div><div class="rp-body"><div class="rp-tiles">' +
+      (c.total ? tile(c.total, "Total de " + c.medida) : "") +
+      tile(c.reg, "Registros") +
+      "</div>";
+    if (c.filas.length)
+      h +=
+        "<div><h3>" +
+        esc(c.grupo ? "Por " + c.grupo : "Por grupo") +
+        " · " +
+        esc(c.medida) +
+        '</h3><div class="rp-tw"><table><thead><tr><th scope="col">' +
+        esc(c.grupo || "Grupo") +
+        '</th><th scope="col" class="n">Antes</th><th scope="col" class="n">Después</th><th scope="col" class="n">Cambio</th><th scope="col" class="n">%</th></tr></thead><tbody>' +
+        c.filas
+          .map(
+            (f) =>
+              '<tr><th scope="row">' +
+              esc(f.k) +
+              '</th><td class="n">' +
+              esc(num0(f.a)) +
+              '</td><td class="n">' +
+              esc(num0(f.b)) +
+              '</td><td class="n"><b>' +
+              esc(cambio(f)) +
+              '</b></td><td class="n">' +
+              esc(pctTxt(f)) +
+              "</td></tr>",
+          )
+          .join("") +
+        "</tbody></table></div></div>";
+    else
+      h +=
+        '<p class="rp-foot">Para ver el cambio por grupo, los dos reportes deben estar agrupados por una columna.</p>';
+    const notas = [];
+    if (c.a.tableId !== c.b.tableId)
+      notas.push("Los reportes son de tablas distintas: " + c.a.tableName + " y " + c.b.tableName + ".");
+    if (c.filas.length && !c.grupo)
+      notas.push("Están agrupados por columnas distintas: " + c.a.data.gName + " y " + c.b.data.gName + ".");
+    if (!c.conSuma)
+      notas.push("Al menos uno no suma ninguna columna, así que se comparan los conteos de filas.");
+    notas.push("Filtro antes: " + c.a.filtro + " · Filtro después: " + c.b.filtro);
+    h += notas.map((x) => '<p class="rp-foot">' + esc(x) + "</p>").join("") + "</div>";
+    $("cmpHoja").innerHTML = h;
+  }
+  function presCmp(c) {
+    const S = [],
+      max = Math.max(1, ...c.filas.map((f) => Math.abs(f.d))),
+      partes = enPartes(c.filas, 5);
+    S.push({
+      t: "Portada",
+      portada: true,
+      h:
+        '<p class="ps-eye">Comparación</p><h2 class="ps-tit">' +
+        esc(c.b.title) +
+        '</h2><p class="ps-meta">' +
+        esc("Antes: " + cuando(c.a)) +
+        '</p><p class="ps-meta">' +
+        esc("Después: " + cuando(c.b)) +
+        "</p>",
+    });
+    const tile = (f, txt) =>
+      '<div class="ps-tile"><b>' +
+      esc(cambio(f)) +
+      "</b><span>" +
+      esc(txt + ": de " + num0(f.a) + " a " + num0(f.b)) +
+      "</span></div>";
+    S.push({
+      t: "Cambio total",
+      h:
+        '<h3 class="ps-h">Cambio total</h3><div class="ps-tiles">' +
+        (c.total ? tile(c.total, "Total de " + c.medida) : "") +
+        tile(c.reg, "Registros") +
+        "</div>",
+    });
+    partes.forEach((arr, i) =>
+      S.push({
+        t: "Cambio por " + (c.grupo || "grupo"),
+        h:
+          '<h3 class="ps-h">Cambio por ' +
+          esc(c.grupo || "grupo") +
+          (partes.length > 1 ? " <small>" + (i + 1) + " de " + partes.length + "</small>" : "") +
+          '</h3><div class="ps-g">' +
+          arr
+            .map(
+              (f) =>
+                '<span class="ps-k">' +
+                esc(f.k) +
+                '</span><span class="ps-n">' +
+                esc(num0(f.a) + " → " + num0(f.b)) +
+                '</span><span class="ps-n ps-s">' +
+                esc(cambio(f)) +
+                '</span><span class="ps-bar"><i style="width:' +
+                Math.round((Math.abs(f.d) / max) * 100) +
+                '%"></i></span>',
+            )
+            .join("") +
+          "</div>",
+      }),
+    );
+    return S;
+  }
+  /* Primero los reportes de la misma tabla, que son los que tiene sentido comparar. */
+  $("repCmp").onclick = () => {
+    const yo = rep.r,
+      otros = state.reports.filter((r) => r.id !== yo.id),
+      misma = (r) => r.tableId === yo.tableId && r.bookId === yo.bookId;
+    otros.sort((p, q) => misma(q) - misma(p));
+    $("cmpLista").innerHTML = otros
+      .map((r) => {
+        const f = fechaTxt(r.at);
+        return (
+          '<button type="button" data-id="' +
+          r.id +
+          '"><b>' +
+          esc(r.title) +
+          '</b><br><span class="vac">' +
+          esc(
+            f.fecha +
+              " · " +
+              f.hora +
+              " · " +
+              r.bookName +
+              " › " +
+              r.tableName +
+              (misma(r) ? "" : " (otra tabla)"),
+          ) +
+          "</span></button>"
+        );
+      })
+      .join("");
+    $("dlgCmpPick").showModal();
+  };
+  $("cmpLista").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-id]"),
+      otro = b && state.reports.find((r) => r.id === b.dataset.id);
+    if (!otro) return;
+    cmp = comparar(rep.r, otro);
+    $("dlgCmpPick").close();
+    syncHoja();
+    pintarCmp();
+    $("dlgCmp").showModal();
+  });
+  $("cmpPresentar").onclick = () => presentar(cmp.b.pal, "Comparación · " + cmp.b.title, presCmp(cmp));
+  $("cmpImprimir").onclick = () => imprimir($("cmpHoja"));
 
   /* ---------- plantillas de reporte ----------
      Una plantilla guarda cómo se arma un reporte (desgloses, suma, detalle, paleta y hoja), no sus datos.
@@ -3066,12 +3281,14 @@
      Carta vertical u horizontal. Es una preferencia de quien imprime, no del reporte guardado. */
   function syncHoja() {
     const h = state.prefs.hoja === "h" ? "h" : "v";
-    document.querySelectorAll("input[name=hojaRep], input[name=hojaTab]").forEach((x) => {
-      x.checked = x.value === h;
-    });
+    document
+      .querySelectorAll("input[name=hojaRep], input[name=hojaTab], input[name=hojaCmp]")
+      .forEach((x) => {
+        x.checked = x.value === h;
+      });
   }
   document.addEventListener("change", (e) => {
-    if (e.target.name !== "hojaRep" && e.target.name !== "hojaTab") return;
+    if (!["hojaRep", "hojaTab", "hojaCmp"].includes(e.target.name)) return;
     state.prefs.hoja = e.target.value;
     save();
     syncHoja();

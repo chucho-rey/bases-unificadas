@@ -203,6 +203,38 @@ function comprobar(nombre, ok, detalle) {
   comprobar("guardar el reporte avisa encima del reporte", await p.locator("#dlgRep #toast").isVisible());
   await p.click("#dlgRep [data-close]");
 
+  console.log("Comparar dos reportes");
+  comprobar("con un solo reporte no se ofrece comparar", await p.locator("#repCmp").isHidden());
+  const cant2 = p.locator("#grid tbody tr").first().locator('input[data-cell="v_can"]');
+  await cant2.fill("20");
+  await cant2.blur();
+  await p.click("#btnRep");
+  await p.selectOption("#repPl", { label: "Ventas por cliente" });
+  await p.click("#repGuardar");
+  comprobar("con dos reportes sí", await p.locator("#repCmp").isVisible());
+  await p.click("#repCmp");
+  comprobar("ofrece el otro reporte", (await p.locator("#cmpLista button").count()) === 1);
+  await p.click("#cmpLista button");
+  const tiles = await p.locator("#cmpHoja .rp-tile").allTextContents();
+  comprobar("cambio en el total", tiles[0] === "▲ +8Total de Cantidad: de 53 a 61 (+15.1 %)", tiles);
+  comprobar("registros sin cambio", tiles[1] === "sin cambioRegistros: de 6 a 6", tiles);
+  const f1 = await p.locator("#cmpHoja tbody tr").first().locator("th, td").allTextContents();
+  comprobar("el grupo que más cambió va primero", f1.join("|") === "Abarrotes La Ceiba|10|18|▲ +8|+80 %", f1);
+  comprobar("los demás grupos, sin cambio", (await p.locator("#cmpHoja tbody tr", { hasText: "sin cambio" }).count()) === 3);
+  comprobar("la comparación no ensancha la página", (await ancho()) <= 0, await ancho());
+  comprobar("botones de 40 px o más", (await chicos()).length === 0, await chicos());
+  await p.click("#cmpPresentar");
+  comprobar("la comparación se presenta", (await dia()) === "1 de 3" && (await p.locator("#presSlide .ps-eye").textContent()) === "Comparación");
+  await p.keyboard.press("End");
+  comprobar("con el cambio por grupo", (await p.locator("#presSlide .ps-g").textContent()).includes("10 → 18"));
+  await p.click("#dlgPres [data-close]");
+  await p.click("#cmpImprimir");
+  comprobar("y se imprime", (await p.locator("#printArea table").count()) === 1);
+  await p.evaluate(() => window.dispatchEvent(new Event("afterprint")));
+  await p.click("#dlgCmp [data-close]");
+  await p.click("#dlgRep [data-close]");
+  await p.click("#btnUndo");
+
   console.log("Fórmulas");
   await p.click('#grid [data-col="v_tot"]');
   await p.click("#cmEditar");

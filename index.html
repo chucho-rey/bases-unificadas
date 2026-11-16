@@ -337,7 +337,7 @@
     <div class="pal" id="repPal" role="group" aria-label="Paleta de colores"></div>
     <div class="rp" id="repHoja"></div>
     <section class="info" id="repInfo" aria-label="Información del reporte" hidden></section>
-    <div class="fila" id="repAcc" hidden><button class="btn sm izq" id="repBorrar" type="button">Eliminar reporte</button></div>
+    <div class="fila" id="repAcc" hidden><button class="btn sm izq" id="repBorrar" type="button">Eliminar reporte</button><button class="btn sm" id="repCmp" type="button">Comparar con otro reporte</button></div>
   </div>
 </dialog>
 
@@ -353,6 +353,34 @@
       <button class="btn" id="presFS" type="button" aria-pressed="false" title="Pantalla completa (F)" hidden>Pantalla completa</button>
       <button class="btn" type="button" data-close>Cerrar</button>
     </div>
+  </div>
+</dialog>
+
+<dialog id="dlgCmpPick" aria-labelledby="cmpPickT">
+  <div class="form">
+    <h2 id="cmpPickT">Comparar con otro reporte</h2>
+    <p class="ayuda">Elige el otro reporte guardado. El más antiguo de los dos se toma como "antes".</p>
+    <div class="lista" id="cmpLista"></div>
+    <div class="fila"><button class="btn" type="button" data-close>Cancelar</button></div>
+  </div>
+</dialog>
+
+<dialog id="dlgCmp" class="full" aria-labelledby="cmpT">
+  <div class="repcol">
+    <div class="prbar"><strong id="cmpT">Comparación de reportes</strong>
+      <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm" id="cmpPresentar" type="button">Presentar</button>
+        <button class="btn sm" id="cmpImprimir" type="button" data-nativo hidden>Imprimir</button>
+        <button class="btn sm" type="button" data-close>Cerrar</button></span></div>
+    <div class="hoja" data-nativo hidden>
+      <span id="hojaCmpT">Hoja para imprimir</span>
+      <div class="seg" role="radiogroup" aria-labelledby="hojaCmpT">
+        <label><input type="radio" name="hojaCmp" value="v"><span>Carta vertical</span></label>
+        <label><input type="radio" name="hojaCmp" value="h"><span>Carta horizontal</span></label>
+      </div>
+    </div>
+    <div class="rp" id="cmpHoja"></div>
+    <p class="ayuda">La comparación no se guarda: se calcula con los dos reportes cada vez que la abres.</p>
   </div>
 </dialog>
 
